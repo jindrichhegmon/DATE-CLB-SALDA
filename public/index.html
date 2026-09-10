@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salda — Centrum &amp; Datec</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f4; --card: #ffffff; --ink: #14151a; --ink-2: #565a63; --ink-3: #8a8e97;
+    --line: #e2e4dd; --accent: #1f5fb0; --accent-ink: #ffffff;
+    --tp: #1f5fb0; --sa: #178f63; --pr: #7a4fd1; --po: #c2410c; --ok: #178f63; --danger: #c62828;
+    --wash-tp: rgba(31,95,176,.10); --wash-sa: rgba(23,143,99,.10); --wash-pr: rgba(122,79,209,.10);
+    --warn: #fff7e0; --shadow: 0 10px 32px rgba(0,0,0,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101114; --card: #1a1c21; --ink: #f2f3f5; --ink-2: #b9bcc4; --ink-3: #7d818a;
+      --line: #2b2e35; --accent: #4f8fe0; --tp: #4f8fe0; --sa: #2fb383; --pr: #a17ff0; --po: #f0774a; --ok: #2fb383;
+      --wash-tp: rgba(79,143,224,.16); --wash-sa: rgba(47,179,131,.16); --wash-pr: rgba(161,127,240,.16); --warn: #2a2513;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 18px 16px 48px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+  header.top h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  header.top .sub { color: var(--ink-3); font-size: 12px; }
+  .status { margin-left: auto; font-size: 12px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 6px; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+  .status.live .dot { background: var(--ok); }
+  .status.err .dot { background: var(--danger); }
+  nav.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  nav.tabs button, .btn, .seg button {
+    appearance: none; font: inherit; cursor: pointer; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink-2); padding: 7px 13px;
+  }
+  nav.tabs button { font-weight: 600; }
+  nav.tabs button[aria-selected="true"], .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn:hover, nav.tabs button:hover { border-color: var(--ink-3); }
+  .btn[disabled] { opacity: .5; cursor: default; }
+  .btn.toggle[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.ghost { background: transparent; }
+  .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .seg button { border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; font-size: 13px; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; }
+  .toolbar label { font-size: 12px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; }
+  .toolbar input[type="date"], .toolbar input[type="search"], .tpgrid input, .tpgrid select {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px;
+  }
+  .grow { flex: 1; }
+  .notice { background: var(--warn); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 14px; white-space: pre-wrap; }
+  .notice[hidden] { display: none; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile .l { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .tile .v { font-size: 24px; font-weight: 650; letter-spacing: -.01em; margin-top: 2px; }
+  .tile.hero .v { font-size: 30px; }
+  .tile .s { font-size: 12px; color: var(--ink-3); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 14px; margin: 0 0 10px; font-weight: 650; }
+  .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+  .share { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--line); }
+  .share div { height: 100%; }
+  .share-l { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--ink-2); margin-top: 6px; flex-wrap: wrap; }
+  .bars { display: grid; grid-template-columns: minmax(140px, 32%) 1fr; gap: 6px 10px; align-items: center; font-size: 12.5px; }
+  .bars .n { color: var(--ink-2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bars .t { display: flex; align-items: center; gap: 8px; }
+  .bars .f { height: 14px; border-radius: 4px; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.date { white-space: nowrap; color: var(--ink-2); }
+  td.muted, .muted { color: var(--ink-3); }
+  td.inc { color: var(--pr); font-weight: 600; }
+  td.neg { color: var(--po); }
+  tfoot td { font-weight: 650; border-bottom: 0; }
+  .typ { white-space: nowrap; }
+  .typ .key { margin-right: 6px; }
+  .empty { color: var(--ink-3); text-align: center; padding: 18px; }
+  .act { white-space: nowrap; text-align: right; }
+  .act button { appearance: none; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 12.5px; cursor: pointer; padding: 2px 4px; }
+  .act button.danger { color: var(--danger); }
+  .act button:hover { text-decoration: underline; }
+  tr.editing td { background: var(--wash-tp); }
+  .tpgrid input, .tpgrid select { width: 100%; min-width: 80px; }
+  .tpgrid td.num input { text-align: right; }
+  .tp-msg { min-height: 18px; font-size: 12.5px; color: var(--ink-2); margin: 6px 0; }
+  .tp-msg.err { color: var(--danger); }
+  #gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  #gate[hidden] { display: none; }
+  .gate-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; max-width: 420px; width: 100%; box-shadow: var(--shadow); }
+  .gate-card h2 { margin: 0 0 6px; font-size: 18px; }
+  .gate-card p { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; }
+  .gate-card input { width: 100%; font: inherit; font-size: 15px; letter-spacing: .08em; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--ink); }
+  .gate-card .btn { width: 100%; margin-top: 12px; padding: 10px; }
+  .gate-err { min-height: 18px; color: var(--danger); font-size: 12.5px; margin-top: 8px; }
+  footer.foot { color: var(--ink-3); font-size: 11.5px; margin-top: 24px; line-height: 1.5; }
+  [hidden] { display: none !important; }
+  @media (max-width: 640px) { .bars { grid-template-columns: 1fr; } .bars .n { text-align: left; } header.top .status { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div id="gate">
+  <form class="gate-card" id="gateForm">
+    <h2>Salda — Centrum &amp; Datec</h2>
+    <p>Zadejte přístupový klíč aplikace. Ověří ho server a v tomto prohlížeči se uloží, příště už nebude potřeba.</p>
+    <input id="gateInput" type="password" autocomplete="off" spellcheck="false" aria-label="Přístupový klíč">
+    <div class="gate-err" id="gateErr"></div>
+    <button class="btn primary" type="submit" id="gateBtn">Odemknout</button>
+  </form>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <div><h1>Salda — Centrum &amp; Datec</h1><div class="sub">saldokonto CLB1 · trvalé příkazy · kalendář plateb</div></div>
+    <span class="status" id="status"><span class="dot"></span><span id="statusText">načítám…</span></span>
+    <button class="btn ghost" id="refreshBtn" title="Znovu načíst z databáze">Obnovit</button>
+    <button class="btn ghost" id="logoutBtn" title="Zapomenout přístupový klíč">Odhlásit</button>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="dod" aria-selected="true">Dodavatelé — závazky</button>
+    <button role="tab" data-tab="odb" aria-selected="false">Odběratelé — pohledávky</button>
+    <button role="tab" data-tab="tp" aria-selected="false">Trvalé příkazy</button>
+  </nav>
+  <div class="notice" id="notice" hidden></div>
+
+  <!-- ===== Dodavatelé ===== -->
+  <section id="tab-dod">
+    <div class="toolbar">
+      <div class="seg" id="dodFirma"><button data-v="centrum" aria-pressed="true">Centrum</button><button data-v="datec" aria-pressed="false">Datec</button><button data-v="both" aria-pressed="false">Obě</button></div>
+      <div class="seg" id="dodRange"><button data-v="m2" aria-pressed="true">Tento + příští měsíc</button><button data-v="d30" aria-pressed="false">Příštích 30 dní</button><button data-v="m1" aria-pressed="false">Tento měsíc</button></div>
+      <label>od <input type="date" id="dodFrom"></label>
+      <label>do <input type="date" id="dodTo"></label>
+    </div>
+    <div class="tiles" id="dodTiles"></div>
+    <div class="card"><h2>Rozložení v období</h2><div class="share" id="dodShare"></div><div class="share-l" id="dodShareL"></div></div>
+    <div class="card"><h2>Největší položky v období</h2><div class="bars" id="dodBars"></div></div>
+    <div class="card">
+      <h2>Všechny položky</h2>
+      <div class="toolbar">
+        <div class="seg" id="dodType"><button data-v="all" aria-pressed="true">Vše</button><button data-v="TP" aria-pressed="false">Trvalé příkazy</button><button data-v="SA" aria-pressed="false">Faktury</button><button data-v="PR" aria-pressed="false">Příjmy</button></div>
+        <input type="search" id="dodSearch" class="grow" placeholder="Hledat dodavatele…" aria-label="Hledat">
+      </div>
+      <div class="table-scroll"><table><thead><tr><th>Splatnost</th><th class="firmCol">Firma</th><th>Položka</th><th>Typ</th><th class="num">Částka</th></tr></thead><tbody id="dodBody"></tbody><tfoot id="dodFoot"></tfoot></table></div>
+    </div>
+  </section>
+
+  <!-- ===== Odběratelé ===== -->
+  <section id="tab-odb" hidden>
+    <div class="toolbar">
+      <div class="seg" id="odbFirma"><button data-v="centrum" aria-pressed="true">Centrum</button><button data-v="datec" aria-pressed="false">Datec</button><button data-v="both" aria-pressed="false">Obě</button></div>
+      <button class="btn toggle" id="odbNoIns" aria-pressed="false" title="Skrýt subjekty s „pojišťovna“ v názvu">Bez pojišťoven</button>
+      <label>splatnost od <input type="date" id="odbFrom"></label>
+      <label>do <input type="date" id="odbTo"></label>
+      <button class="btn ghost" id="odbClear">Vše</button>
+    </div>
+    <div class="tiles" id="odbTiles"></div>
+    <div class="card"><h2>Po splatnosti vs. ve splatnosti</h2><div class="share" id="odbShare"></div><div class="share-l" id="odbShareL"></div></div>
+    <div class="card"><h2>Největší pohledávky</h2><div class="bars" id="odbBars"></div></div>
+    <div class="card">
+      <h2>Všechny položky</h2>
+      <div class="toolbar">
+        <div class="seg" id="odbType"><button data-v="all" aria-pressed="true">Vše</button><button data-v="PO" aria-pressed="false">Po splatnosti</button><button data-v="OK" aria-pressed="false">Ve splatnosti</button></div>
+        <input type="search" id="odbSearch" class="grow" placeholder="Hledat odběratele…" aria-label="Hledat">
+      </div>
+      <div class="table-scroll"><table><thead><tr><th>Splatnost</th><th class="firmCol">Firma</th><th>Odběratel</th><th>Stav</th><th class="num">Částka</th></tr></thead><tbody id="odbBody"></tbody><tfoot id="odbFoot"></tfoot></table></div>
+    </div>
+  </section>
+
+  <!-- ===== Trvalé příkazy ===== -->
+  <section id="tab-tp" hidden>
+    <div class="toolbar">
+      <div class="seg" id="tpFirma"><button data-v="centrum" aria-pressed="true">Centrum</button><button data-v="datec" aria-pressed="false">Datec</button></div>
+      <span class="grow"></span>
+      <button class="btn primary" id="tpAddBtn">+ Přidat výdaj</button>
+      <button class="btn" id="tpAddIncBtn">+ Přidat příjem</button>
+    </div>
+    <div class="card">
+      <div class="tp-msg" id="tpMsg"></div>
+      <div class="table-scroll"><table class="tpgrid"><thead><tr><th>Popis</th><th>Typ</th><th>Frekvence</th><th class="num">Částka</th><th>Datum platby</th><th></th></tr></thead><tbody id="tpBody"></tbody><tfoot id="tpFoot"></tfoot></table></div>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Kladná částka = výdaj (trvalý příkaz), příjem se ukládá jako záporná. Datum platby je referenční termín; další termíny se v kalendáři odvozují z frekvence, počínaje dneškem.</p>
+    </div>
+  </section>
+
+  <footer class="foot">Zdroj: SQL Server CLB1 – saldokonto dodavatelů (CLBSaldoDO, DATECSaldoDO) a odběratelů (CLBSaldoOD, DATECSaldoOD), trvalé příkazy v tabulce Salda_TrvalePrikazy. Data se načítají přímo z databáze při každém otevření a obnovení. © 2026 Ing. Jindřich Hegmon — DATEC/CLB.</footer>
+</div>
+
+<script>
+"use strict";
+/* =============================================================================
+   Salda — Centrum & Datec · frontend
+   Backend: /api (Netlify Function) – čte CLB1 přímo, přístup chrání klíč aplikace (hlavička x-app-key).
+   ============================================================================= */
+const FIRMA = { centrum: "Centrum", datec: "Datec" };
+const KEY_STORE = "salda.appKey";
+const TAB_STORE = "salda.tab";
+const FREQS = ["Měsíční", "Čtvrtletní", "Pololetní", "Roční", "Týdenní", "14 dní", "Jednorázově"];
+const KIND = { TP: { label: "Trvalý příkaz", color: "var(--tp)" }, SA: { label: "Faktura", color: "var(--sa)" }, PR: { label: "Příjem", color: "var(--pr)" } };
+
+const czk = new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const czk0 = new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", maximumFractionDigits: 0 });
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* soukromý režim */ } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+};
+
+/* ---------- datumy ---------- */
+const pad = (n) => String(n).padStart(2, "0");
+const isoOf = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const today = () => isoOf(new Date());
+const parseIso = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || "")); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const fmtDate = (s) => { const d = parseIso(s); return d ? d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear() : String(s || ""); };
+const daysOverdue = (s) => { const d = parseIso(s); if (!d) return 0; return Math.max(0, Math.round((new Date().setHours(0, 0, 0, 0) - d.getTime()) / 86400000)); };
+const pct = (a, t) => (t > 0 ? Math.round(a / t * 100) + " %" : "0 %");
+
+/* ---------- opakování trvalých příkazů podle frekvence ---------- */
+function freqStep(freq) {
+  const f = String(freq || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/^(tydenni|tydne)$/.test(f)) return { days: 7 };
+  if (/^(14 dni|po 14 dnech|ctrnactidenni|dvoutydenni)$/.test(f)) return { days: 14 };
+  if (/^(mesicni|mesicne)$/.test(f)) return { months: 1 };
+  if (/^(ctvrtletni|ctvrtletne|kvartalni)$/.test(f)) return { months: 3 };
+  if (/^(pololetni|pololetne)$/.test(f)) return { months: 6 };
+  if (/^(rocni|rocne)$/.test(f)) return { months: 12 };
+  return null;                                   // jednorázově / neznámá frekvence
+}
+function step(d, st, day) {
+  const n = new Date(d.getTime());
+  if (st.days) { n.setDate(n.getDate() + st.days); return n; }
+  n.setDate(1); n.setMonth(n.getMonth() + st.months);
+  n.setDate(Math.min(day, new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate()));
+  return n;
+}
+/* termíny platby v intervalu <from, to> */
+function occurrences(startIso, freq, from, to) {
+  const start = parseIso(startIso);
+  if (!start || from > to) return [];
+  const st = freqStep(freq);
+  if (!st) { const s = isoOf(start); return s >= from && s <= to ? [s] : []; }
+  const out = []; let d = start, guard = 0; const day = start.getDate();
+  while (isoOf(d) < from && guard++ < 5000) d = step(d, st, day);
+  while (isoOf(d) <= to && guard++ < 5000) { out.push(isoOf(d)); d = step(d, st, day); }
+  return out;
+}
+function nextOccurrence(startIso, freq) {
+  const end = new Date(); end.setFullYear(end.getFullYear() + 3);
+  const o = occurrences(startIso, freq, today(), isoOf(end));
+  return o.length ? o[0] : null;
+}
+
+/* ---------- API ---------- */
+const api = {
+  key() { return store.get(KEY_STORE) || ""; },
+  async call(method, path, body, keyOverride) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    let resp, text;
+    try {
+      resp = await fetch(path, { method, cache: "no-store", signal: ctrl.signal,
+        headers: { "x-app-key": keyOverride != null ? keyOverride : this.key(), ...(body ? { "Content-Type": "application/json" } : {}) },
+        body: body ? JSON.stringify(body) : undefined });
+      text = await resp.text();
+    } catch (e) {
+      throw new Error(e && e.name === "AbortError" ? "Server neodpověděl do 45 s." : "Server je nedostupný (" + (e && e.message ? e.message : e) + ").");
+    } finally { clearTimeout(timer); }
+    let data = null; try { data = text ? JSON.parse(text) : null; } catch (e) { /* níže */ }
+    if (resp.status === 401) { const err = new Error("Neplatný přístupový klíč."); err.unauthorized = true; throw err; }
+    if (!resp.ok || !data || data.ok !== true) throw new Error((data && data.error) || ("HTTP " + resp.status + " – " + String(text || "").slice(0, 160)));
+    return data;
+  }
+};
+
+/* ---------- stav ---------- */
+const state = {
+  tab: "dod",
+  data: null,          // { faktury, odberatele, tp, generovano }
+  loadedAt: null,
+  dod: { firma: "centrum", preset: "m2", from: null, to: null, type: "all", q: "" },
+  odb: { firma: "centrum", noIns: false, from: null, to: null, type: "all", q: "" },
+  tp: { firma: "centrum", editing: null, adding: null, confirm: null, busy: false }
+};
+
+function setStatus(mode, text) { const s = $("status"); s.className = "status " + mode; $("statusText").textContent = text; }
+function notice(text) { const n = $("notice"); if (!text) { n.hidden = true; n.textContent = ""; } else { n.textContent = text; n.hidden = false; } }
+
+/* ---------- načtení ---------- */
+let loadSeq = 0;
+async function load() {
+  const seq = ++loadSeq;
+  setStatus("", "načítám z databáze…");
+  $("refreshBtn").disabled = true;
+  try {
+    const d = await api.call("GET", "/api/prehled?cast=vse");
+    if (seq !== loadSeq) return;
+    state.data = d; state.loadedAt = new Date();
+    notice("");
+    setStatus("live", "Živá data z CLB1 · " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }));
+  } catch (e) {
+    if (seq !== loadSeq) return;
+    if (e.unauthorized) { logout("Přístupový klíč už neplatí, zadejte ho znovu."); return; }
+    setStatus("err", state.data ? "Obnovení selhalo, zobrazena data z " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "Data se nepodařilo načíst");
+    notice("Načtení z databáze se nezdařilo: " + e.message + "\nZkuste Obnovit. Pokud problém trvá, zkontrolujte na Netlify proměnné SQL_* a dostupnost SQL Serveru.");
+  } finally { if (seq === loadSeq) $("refreshBtn").disabled = false; }
+  renderAll();
+}
+function renderAll() { renderDod(); renderOdb(); renderTp(); }
+
+/* ---------- pomocné prvky ---------- */
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function tile(label, value, sub, opts) {
+  const t = el("div", "tile" + (opts && opts.hero ? " hero" : ""));
+  const l = el("div", "l"); if (opts && opts.color) { const k = el("span", "key"); k.style.background = opts.color; l.appendChild(k); } l.appendChild(document.createTextNode(label));
+  t.append(l, el("div", "v", value), el("div", "s", sub || ""));
+  return t;
+}
+function seg(id, onPick) {
+  const s = $(id);
+  s.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; for (const x of s.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b)); onPick(b.dataset.v); });
+}
+function shareBar(barId, labelId, parts) {
+  const bar = $(barId), lab = $(labelId); bar.replaceChildren(); lab.replaceChildren();
+  const total = parts.reduce((s, p) => s + p.value, 0);
+  if (total <= 0) { lab.textContent = "Žádné položky."; return; }
+  for (const p of parts) { const d = el("div"); d.style.flex = String(p.value); d.style.background = p.color; bar.appendChild(d); const l = el("span"); const st = el("strong", null, czk0.format(p.value)); l.append(p.label + " ", st, " (" + pct(p.value, total) + ")"); lab.appendChild(l); }
+}
+function bars(id, items, colorOf) {
+  const box = $(id); box.replaceChildren();
+  if (!items.length) { box.appendChild(el("div", "empty", "Žádná data.")); return; }
+  const max = Math.max(...items.map(i => Math.abs(i.amount)));
+  for (const it of items) {
+    const n = el("div", "n", it.label); n.title = it.label;
+    const t = el("div", "t"); const f = el("div", "f"); f.style.width = Math.max(2, Math.abs(it.amount) / max * 70) + "%"; f.style.background = colorOf(it);
+    t.append(f, el("span", "muted", czk0.format(it.amount))); box.append(n, t);
+  }
+}
+function rows(tbody, list, renderRow, emptyText) {
+  tbody.replaceChildren();
+  if (!list.length) { const tr = el("tr"); const td = el("td", "empty", emptyText); td.colSpan = 6; tr.appendChild(td); tbody.appendChild(tr); return; }
+  for (const it of list) tbody.appendChild(renderRow(it));
+}
+
+/* ===================== Dodavatelé ===================== */
+function presetRange(p) {
+  const n = new Date();
+  if (p === "d30") { const e = new Date(n); e.setDate(e.getDate() + 30); return [isoOf(n), isoOf(e)]; }
+  if (p === "m1") return [isoOf(new Date(n.getFullYear(), n.getMonth(), 1)), isoOf(new Date(n.getFullYear(), n.getMonth() + 1, 0))];
+  return [isoOf(new Date(n.getFullYear(), n.getMonth(), 1)), isoOf(new Date(n.getFullYear(), n.getMonth() + 2, 0))];
+}
+/* položky kalendáře plateb v období: faktury (SA) + rozepsané trvalé příkazy (TP/PR, jen od dneška) */
+function dodItems() {
+  const d = state.data; if (!d) return [];
+  const { from, to } = state.dod; const tpFrom = from > today() ? from : today();
+  const firms = state.dod.firma === "both" ? ["centrum", "datec"] : [state.dod.firma];
+  const out = [];
+  for (const f of firms) {
+    for (const r of (d.faktury && d.faktury[f]) || []) {
+      if (!r.splatnost || !r.castka || r.splatnost < from || r.splatnost > to) continue;
+      out.push({ kind: "SA", name: r.nazev, amount: Math.abs(r.castka), due: r.splatnost, firma: f, freq: "" });
+    }
+    for (const r of (d.tp && d.tp[f]) || []) {
+      if (!r.castka) continue;
+      for (const due of occurrences(r.datum, r.frekvence, tpFrom, to)) out.push({ kind: r.castka < 0 ? "PR" : "TP", name: r.popis, amount: Math.abs(r.castka), due, firma: f, freq: r.frekvence });
+    }
+  }
+  return out.sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : b.amount - a.amount);
+}
+function renderDod() {
+  const items = dodItems();
+  const sum = (k) => items.filter(i => i.kind === k).reduce((s, i) => s + i.amount, 0);
+  const cnt = (k) => items.filter(i => i.kind === k).length;
+  const tp = sum("TP"), sa = sum("SA"), pr = sum("PR"), total = tp + sa;
+  const tiles = $("dodTiles"); tiles.replaceChildren();
+  tiles.appendChild(tile("Celkem k úhradě", czk0.format(total), (cnt("TP") + cnt("SA")) + " položek v období", { hero: true }));
+  tiles.appendChild(tile("Trvalé příkazy", czk0.format(tp), cnt("TP") + " položek · " + pct(tp, total), { color: KIND.TP.color }));
+  tiles.appendChild(tile("Faktury", czk0.format(sa), cnt("SA") + " položek · " + pct(sa, total), { color: KIND.SA.color }));
+  if (cnt("PR")) { const bil = pr - total; tiles.appendChild(tile("Pravidelné příjmy", "+" + czk0.format(pr), cnt("PR") + " položek · bilance " + (bil >= 0 ? "+" : "") + czk0.format(bil), { color: KIND.PR.color })); }
+  const up = items.filter(i => i.kind !== "PR" && i.due >= today());
+  if (up.length) { const day = up[0].due; const onDay = up.filter(i => i.due === day); tiles.appendChild(tile("Nejbližší splatnost", fmtDate(day), czk0.format(onDay.reduce((s, i) => s + i.amount, 0)) + " · " + onDay.length + " pol.")); }
+  else tiles.appendChild(tile("Nejbližší splatnost", "—", "žádná nadcházející"));
+  shareBar("dodShare", "dodShareL", [{ label: "Trvalé příkazy", value: tp, color: KIND.TP.color }, { label: "Faktury", value: sa, color: KIND.SA.color }]);
+  const both = state.dod.firma === "both";
+  bars("dodBars", items.filter(i => i.kind !== "PR").slice().sort((a, b) => b.amount - a.amount).slice(0, 8).map(i => ({ label: (both ? FIRMA[i.firma] + " · " : "") + i.name, amount: i.amount, kind: i.kind })), i => KIND[i.kind].color);
+  for (const th of document.querySelectorAll("#tab-dod .firmCol")) th.hidden = !both;
+  const q = state.dod.q.trim().toLowerCase();
+  const list = items.filter(i => (state.dod.type === "all" || i.kind === state.dod.type) && (!q || i.name.toLowerCase().includes(q)));
+  rows($("dodBody"), list, (i) => {
+    const tr = el("tr"); tr.appendChild(el("td", "date", fmtDate(i.due)));
+    if (both) tr.appendChild(el("td", "muted", FIRMA[i.firma]));
+    const n = el("td", null, i.name); if (i.freq) n.appendChild(el("span", "muted", " · " + i.freq)); tr.appendChild(n);
+    const t = el("td", "typ"); const k = el("span", "key"); k.style.background = KIND[i.kind].color; t.append(k, KIND[i.kind].label); tr.appendChild(t);
+    tr.appendChild(el("td", "num" + (i.kind === "PR" ? " inc" : ""), (i.kind === "PR" ? "+" : "") + czk.format(i.amount)));
+    return tr;
+  }, "Žádné položky neodpovídají filtru.");
+  const foot = $("dodFoot"); foot.replaceChildren();
+  const exp = list.filter(i => i.kind !== "PR").reduce((s, i) => s + i.amount, 0), inc = list.filter(i => i.kind === "PR").reduce((s, i) => s + i.amount, 0);
+  const footRow = (label, val, cls) => { const tr = el("tr"); const a = el("td", null, label); a.colSpan = both ? 4 : 3; tr.append(a, el("td", "num" + (cls ? " " + cls : ""), val)); foot.appendChild(tr); };
+  if (list.length) { footRow("Výdaje celkem (" + list.filter(i => i.kind !== "PR").length + ")", czk.format(exp)); if (inc) { footRow("Příjmy celkem", "+" + czk.format(inc), "inc"); footRow("Bilance", (inc - exp >= 0 ? "+" : "") + czk.format(inc - exp), inc - exp >= 0 ? "inc" : ""); } }
+}
+seg("dodFirma", v => { state.dod.firma = v; renderDod(); });
+seg("dodType", v => { state.dod.type = v; renderDod(); });
+seg("dodRange", v => { state.dod.preset = v; [state.dod.from, state.dod.to] = presetRange(v); $("dodFrom").value = state.dod.from; $("dodTo").value = state.dod.to; renderDod(); });
+$("dodSearch").addEventListener("input", e => { state.dod.q = e.target.value; renderDod(); });
+for (const id of ["dodFrom", "dodTo"]) $(id).addEventListener("change", () => { const f = $("dodFrom").value, t = $("dodTo").value; if (!f || !t || f > t) return; state.dod.from = f; state.dod.to = t; for (const b of document.querySelectorAll("#dodRange button")) b.setAttribute("aria-pressed", "false"); renderDod(); });
+
+/* ===================== Odběratelé ===================== */
+function odbItems() {
+  const d = state.data; if (!d) return [];
+  const firms = state.odb.firma === "both" ? ["centrum", "datec"] : [state.odb.firma];
+  const out = [];
+  for (const f of firms) for (const r of (d.odberatele && d.odberatele[f]) || []) {
+    if (!r.splatnost || !r.castka) continue;
+    if (state.odb.noIns && /poji[šs][ťt]ovna/i.test(r.nazev)) continue;
+    if (state.odb.from && r.splatnost < state.odb.from) continue;
+    if (state.odb.to && r.splatnost > state.odb.to) continue;
+    out.push({ kind: r.splatnost < today() ? "PO" : "OK", name: r.nazev, amount: r.castka, due: r.splatnost, firma: f });
+  }
+  return out.sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : Math.abs(b.amount) - Math.abs(a.amount));
+}
+function renderOdb() {
+  const items = odbItems();
+  const sum = (k) => items.filter(i => i.kind === k).reduce((s, i) => s + i.amount, 0);
+  const cnt = (k) => items.filter(i => i.kind === k).length;
+  const po = sum("PO"), ok = sum("OK"), total = po + ok, prepl = items.filter(i => i.amount < 0).reduce((s, i) => s + i.amount, 0);
+  const tiles = $("odbTiles"); tiles.replaceChildren();
+  tiles.appendChild(tile("Pohledávky celkem (netto)", czk0.format(total), items.length + " položek" + (prepl < 0 ? " · přeplatky " + czk0.format(prepl) : ""), { hero: true }));
+  tiles.appendChild(tile("Po splatnosti", czk0.format(po), cnt("PO") + " položek · " + pct(po, total), { color: "var(--po)" }));
+  tiles.appendChild(tile("Ve splatnosti", czk0.format(ok), cnt("OK") + " položek · " + pct(ok, total), { color: "var(--ok)" }));
+  const over = items.filter(i => i.kind === "PO");
+  tiles.appendChild(over.length ? tile("Nejdéle po splatnosti", daysOverdue(over[0].due) + " dní", over[0].name.slice(0, 30) + " · " + fmtDate(over[0].due)) : tile("Nejdéle po splatnosti", "—", "nic po splatnosti"));
+  const pos = (k) => items.filter(i => i.kind === k && i.amount > 0).reduce((s, i) => s + i.amount, 0);
+  shareBar("odbShare", "odbShareL", [{ label: "Po splatnosti", value: pos("PO"), color: "var(--po)" }, { label: "Ve splatnosti", value: pos("OK"), color: "var(--ok)" }]);
+  const both = state.odb.firma === "both";
+  bars("odbBars", items.slice().sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 8).map(i => ({ label: (both ? FIRMA[i.firma] + " · " : "") + i.name, amount: i.amount, kind: i.kind })), i => i.kind === "PO" ? "var(--po)" : "var(--ok)");
+  for (const th of document.querySelectorAll("#tab-odb .firmCol")) th.hidden = !both;
+  const q = state.odb.q.trim().toLowerCase();
+  const list = items.filter(i => (state.odb.type === "all" || i.kind === state.odb.type) && (!q || i.name.toLowerCase().includes(q)));
+  rows($("odbBody"), list, (i) => {
+    const tr = el("tr"); tr.appendChild(el("td", "date", fmtDate(i.due)));
+    if (both) tr.appendChild(el("td", "muted", FIRMA[i.firma]));
+    tr.appendChild(el("td", null, i.name));
+    const t = el("td", "typ"); const k = el("span", "key"); k.style.background = i.kind === "PO" ? "var(--po)" : "var(--ok)"; t.append(k, i.kind === "PO" ? "Po splatnosti · " + daysOverdue(i.due) + " dní" : "Ve splatnosti"); tr.appendChild(t);
+    tr.appendChild(el("td", "num" + (i.amount < 0 ? " neg" : ""), czk.format(i.amount)));
+    return tr;
+  }, "Žádné položky neodpovídají filtru.");
+  const foot = $("odbFoot"); foot.replaceChildren();
+  if (list.length) { const tr = el("tr"); const a = el("td", null, "Celkem netto (" + list.length + " položek)"); a.colSpan = both ? 4 : 3; tr.append(a, el("td", "num", czk.format(list.reduce((s, i) => s + i.amount, 0)))); foot.appendChild(tr); }
+}
+seg("odbFirma", v => { state.odb.firma = v; renderOdb(); });
+seg("odbType", v => { state.odb.type = v; renderOdb(); });
+$("odbNoIns").addEventListener("click", () => { state.odb.noIns = !state.odb.noIns; $("odbNoIns").setAttribute("aria-pressed", String(state.odb.noIns)); renderOdb(); });
+$("odbSearch").addEventListener("input", e => { state.odb.q = e.target.value; renderOdb(); });
+for (const id of ["odbFrom", "odbTo"]) $(id).addEventListener("change", () => { state.odb.from = $("odbFrom").value || null; state.odb.to = $("odbTo").value || null; renderOdb(); });
+$("odbClear").addEventListener("click", () => { $("odbFrom").value = ""; $("odbTo").value = ""; state.odb.from = state.odb.to = null; renderOdb(); });
+
+/* ===================== Trvalé příkazy ===================== */
+function tpMsg(text, err) { const m = $("tpMsg"); m.textContent = text || ""; m.classList.toggle("err", !!err); }
+const norm = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+function tpList() { const d = state.data; return d && d.tp ? (d.tp[state.tp.firma] || []).slice().sort((a, b) => a.popis.localeCompare(b.popis, "cs")) : []; }
+
+function editRow(rec, typDefault) {
+  const tr = el("tr", "editing");
+  const inPopis = el("input"); inPopis.type = "text"; inPopis.placeholder = "Popis"; inPopis.value = rec ? rec.popis : "";
+  const inTyp = el("select"); for (const [v, l] of [["TP", "Výdaj"], ["PR", "Příjem"]]) { const o = el("option", null, l); o.value = v; inTyp.appendChild(o); } inTyp.value = rec ? (rec.castka < 0 ? "PR" : "TP") : typDefault;
+  const inFreq = el("select"); const fs = FREQS.slice(); if (rec && rec.frekvence && !fs.includes(rec.frekvence)) fs.unshift(rec.frekvence); for (const f of fs) { const o = el("option", null, f); o.value = f; inFreq.appendChild(o); } inFreq.value = rec ? rec.frekvence : "Měsíční";
+  const inAmt = el("input"); inAmt.type = "number"; inAmt.step = "0.01"; inAmt.min = "0"; inAmt.value = rec ? Math.abs(rec.castka) : "";
+  const inDate = el("input"); inDate.type = "date"; inDate.value = rec ? (rec.datum || "") : today();
+  const save = el("button", null, "Uložit"), cancel = el("button", null, "Zrušit");
+  cancel.addEventListener("click", () => { state.tp.editing = null; state.tp.adding = null; tpMsg(""); renderTp(); });
+  let dupOk = false;
+  save.addEventListener("click", async () => {
+    const popis = inPopis.value.trim(), frekvence = inFreq.value, amt = parseFloat(inAmt.value), datum = inDate.value, typ = inTyp.value;
+    if (!popis) return tpMsg("Vyplňte popis.", true);
+    if (!(amt > 0)) return tpMsg("Zadejte kladnou částku – směr určuje typ Výdaj/Příjem.", true);
+    if (!datum) return tpMsg("Vyplňte datum platby.", true);
+    const others = tpList().filter(r => !rec || r.id !== rec.id);
+    const castka = typ === "PR" ? -amt : amt;
+    if (others.some(r => norm(r.popis) === norm(popis) && norm(r.frekvence) === norm(frekvence) && Math.round(r.castka * 100) === Math.round(castka * 100)))
+      return tpMsg("Stejný záznam už existuje (popis, frekvence i částka) – neuloženo.", true);
+    const sameName = others.find(r => norm(r.popis) === norm(popis));
+    if (sameName && !dupOk) { dupOk = true; return tpMsg("Záznam „" + sameName.popis + "“ už existuje (" + sameName.frekvence + ", " + czk.format(sameName.castka) + "). Je-li to opravdu jiný příkaz, klikněte na Uložit znovu.", true); }
+    await tpSave(rec ? "update" : "create", { id: rec ? rec.id : null, popis, frekvence, castka, datum });
+  });
+  for (const i of [inPopis, inTyp, inFreq, inAmt, inDate]) i.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); save.click(); } else if (e.key === "Escape") { e.preventDefault(); cancel.click(); } });
+  const tds = [inPopis, inTyp, inFreq, inAmt, inDate].map((i, k) => { const td = el("td", k === 3 ? "num" : null); td.appendChild(i); return td; });
+  const act = el("td", "act"); act.append(save, cancel);
+  tr.append(...tds, act);
+  return tr;
+}
+async function tpSave(op, rec) {
+  if (state.tp.busy) return;
+  state.tp.busy = true; tpMsg(op === "create" ? "Ukládám…" : "Ukládám změny…");
+  const firma = state.tp.firma;
+  try {
+    const body = { popis: rec.popis, frekvence: rec.frekvence, castka: rec.castka, datum: rec.datum };
+    const r = op === "create" ? await api.call("POST", "/api/tp/" + firma, body) : await api.call("PUT", "/api/tp/" + firma + "/" + rec.id, body);
+    state.tp.editing = null; state.tp.adding = null;
+    await tpReload();
+    const saved = tpList().find(x => x.id === r.zaznam.id);
+    tpMsg(saved ? "Uloženo a ověřeno v databázi: " + saved.popis + "." : "Uloženo, ale záznam se v databázi nenašel – obnovte stránku.", !saved);
+  } catch (e) { tpMsg("Uložení se nezdařilo: " + e.message, true); }
+  state.tp.busy = false; renderTp();
+}
+async function tpDelete(rec) {
+  if (state.tp.busy) return;
+  state.tp.busy = true; tpMsg("Mažu…");
+  try {
+    await api.call("DELETE", "/api/tp/" + state.tp.firma + "/" + rec.id);
+    state.tp.confirm = null;
+    await tpReload();
+    tpMsg(tpList().some(x => x.id === rec.id) ? "Smazání se v databázi nepotvrdilo – obnovte stránku." : "Smazáno.", tpList().some(x => x.id === rec.id));
+  } catch (e) { tpMsg("Smazání se nezdařilo: " + e.message, true); }
+  state.tp.busy = false; renderTp();
+}
+async function tpReload() {
+  const r = await api.call("GET", "/api/tp");
+  if (state.data) state.data.tp = r.tp; else state.data = { tp: r.tp };
+  renderDod();
+}
+function renderTp() {
+  const body = $("tpBody"), foot = $("tpFoot"); body.replaceChildren(); foot.replaceChildren();
+  const list = tpList();
+  if (state.tp.adding) body.appendChild(editRow(null, state.tp.adding));
+  for (const rec of list) {
+    if (state.tp.editing === rec.id) { body.appendChild(editRow(rec)); continue; }
+    const inc = rec.castka < 0;
+    const tr = el("tr");
+    tr.appendChild(el("td", null, rec.popis));
+    const t = el("td", "typ"); const k = el("span", "key"); k.style.background = inc ? KIND.PR.color : KIND.TP.color; t.append(k, inc ? "Příjem" : "Výdaj"); tr.appendChild(t);
+    tr.appendChild(el("td", "muted", rec.frekvence));
+    tr.appendChild(el("td", "num" + (inc ? " inc" : ""), (inc ? "+" : "") + czk.format(Math.abs(rec.castka))));
+    const d = el("td", "date", fmtDate(rec.datum)); const nx = nextOccurrence(rec.datum, rec.frekvence); if (nx && nx !== rec.datum) d.appendChild(el("span", "muted", " · příští " + fmtDate(nx))); tr.appendChild(d);
+    const act = el("td", "act");
+    const e = el("button", null, "Upravit"); e.addEventListener("click", () => { state.tp.editing = rec.id; state.tp.adding = null; state.tp.confirm = null; tpMsg(""); renderTp(); });
+    const x = el("button", "danger", state.tp.confirm === rec.id ? "Opravdu smazat?" : "Smazat");
+    x.addEventListener("click", () => { if (state.tp.confirm === rec.id) tpDelete(rec); else { state.tp.confirm = rec.id; renderTp(); } });
+    act.append(e, x); tr.appendChild(act); body.appendChild(tr);
+  }
+  if (!list.length && !state.tp.adding) { const tr = el("tr"); const td = el("td", "empty", state.data ? "Žádné trvalé příkazy." : "Data nejsou načtena."); td.colSpan = 6; tr.appendChild(td); body.appendChild(tr); }
+  const focus = body.querySelector("tr.editing input[type=text]"); if (focus) focus.focus();
+  if (list.length) {
+    const exp = list.filter(r => r.castka > 0).reduce((s, r) => s + r.castka, 0), inc = list.filter(r => r.castka < 0).reduce((s, r) => s - r.castka, 0);
+    const row = (label, val, cls) => { const tr = el("tr"); const a = el("td", null, label); a.colSpan = 3; const b = el("td", "num" + (cls ? " " + cls : ""), val); const c = el("td"); c.colSpan = 2; tr.append(a, b, c); foot.appendChild(tr); };
+    row("Výdaje celkem (" + list.filter(r => r.castka > 0).length + ")", czk.format(exp));
+    if (inc) { row("Příjmy celkem (" + list.filter(r => r.castka < 0).length + ")", "+" + czk.format(inc), "inc"); row("Rozdíl (příjmy − výdaje)", (inc - exp >= 0 ? "+" : "") + czk.format(inc - exp), inc - exp >= 0 ? "inc" : ""); }
+  }
+}
+seg("tpFirma", v => { state.tp.firma = v; state.tp.editing = state.tp.adding = state.tp.confirm = null; tpMsg(""); renderTp(); });
+$("tpAddBtn").addEventListener("click", () => { state.tp.adding = "TP"; state.tp.editing = null; tpMsg(""); renderTp(); });
+$("tpAddIncBtn").addEventListener("click", () => { state.tp.adding = "PR"; state.tp.editing = null; tpMsg(""); renderTp(); });
+
+/* ===================== záložky, brána, start ===================== */
+function showTab(tab) {
+  if (!["dod", "odb", "tp"].includes(tab)) tab = "dod";
+  state.tab = tab; store.set(TAB_STORE, tab);
+  for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+  for (const t of ["dod", "odb", "tp"]) $("tab-" + t).hidden = (t !== tab);
+}
+document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); });
+$("refreshBtn").addEventListener("click", () => load());
+$("logoutBtn").addEventListener("click", () => logout(""));
+
+function logout(msg) {
+  store.del(KEY_STORE); state.data = null;
+  $("app").hidden = true; $("gate").hidden = false; $("gateErr").textContent = msg || ""; $("gateInput").value = ""; $("gateInput").focus();
+}
+async function startApp() {
+  $("gate").hidden = true; $("app").hidden = false;
+  [state.dod.from, state.dod.to] = presetRange(state.dod.preset); $("dodFrom").value = state.dod.from; $("dodTo").value = state.dod.to;
+  showTab(store.get(TAB_STORE) || "dod");
+  renderAll();
+  await load();
+}
+$("gateForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const key = $("gateInput").value.trim();
+  if (!key) { $("gateErr").textContent = "Zadejte klíč."; return; }
+  $("gateBtn").disabled = true; $("gateErr").textContent = "Ověřuji…";
+  try { await api.call("GET", "/api/tp", null, key); store.set(KEY_STORE, key); $("gateErr").textContent = ""; startApp(); }
+  catch (err) { $("gateErr").textContent = err.unauthorized ? "Neplatný klíč, zkuste to znovu." : "Ověření se nezdařilo: " + err.message; }
+  finally { $("gateBtn").disabled = false; }
+});
+if (api.key()) startApp(); else $("gateInput").focus();
+</script>
+</body>
+</html>

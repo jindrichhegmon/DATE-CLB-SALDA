@@ -1,0 +1,14 @@
+{
+  "name": "datec-salda",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Salda Centrum & Datec – přehled závazků, pohledávek a trvalých příkazů přímo z SQL (CLB1), Netlify web s vlastními funkcemi",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "npx netlify dev"
+  },
+  "dependencies": {
+    "mssql": "^11.0.2"
+  }
+}

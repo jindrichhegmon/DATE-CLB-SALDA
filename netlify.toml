@@ -1,0 +1,16 @@
+# Salda Centrum & Datec – frontend (public/) + backend (netlify/functions/) v jednom Netlify projektu.
+# Proměnné prostředí (Site configuration → Environment variables): viz .env.example
+[build]
+  publish = "public"
+  command = "echo 'bez buildu'"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["mssql", "tedious"]
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
