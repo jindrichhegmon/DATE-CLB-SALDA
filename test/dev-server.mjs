@@ -1,5 +1,5 @@
 // Lokální server pro ruční i automatické testy bez SQL Serveru: public/ + /api přes skutečný handler nad mock databází.
-//   node test/dev-server.mjs [port]      (APP_KEY=test-key)
+//   node test/dev-server.mjs [port]
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -32,7 +32,7 @@ const mockDb = {
     throw new Error('mock: neočekávaný exec ' + sqlText);
   },
 };
-const handle = createHandler({ db: mockDb, appKey: process.env.APP_KEY || 'test-key' });
+const handle = createHandler({ db: mockDb });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
 const server = http.createServer(async (req, res) => {
@@ -48,4 +48,4 @@ const server = http.createServer(async (req, res) => {
   catch { res.writeHead(404); res.end('not found'); }
 });
 const port = Number(process.argv[2] || process.env.PORT || 8787);
-server.listen(port, '127.0.0.1', () => console.log(`dev server http://127.0.0.1:${port}  (APP_KEY=${process.env.APP_KEY || 'test-key'})`));
+server.listen(port, '127.0.0.1', () => console.log(`dev server http://127.0.0.1:${port}`));

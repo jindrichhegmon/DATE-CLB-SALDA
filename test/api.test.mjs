@@ -31,22 +31,18 @@ function mockDb() {
     },
   };
 }
-const KEY = 'tajny-klic';
-const call = (h, method, path, body, key = KEY) => h(new Request('https://salda.test' + path, {
-  method, headers: { ...(key ? { 'x-app-key': key } : {}), 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }));
+const call = (h, method, path, body) => h(new Request('https://salda.test' + path, {
+  method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }));
 
-test('health bez klíče, ostatní vyžadují klíč', async () => {
-  const h = createHandler({ db: mockDb(), appKey: KEY });
-  assert.equal((await call(h, 'GET', '/api/health', null, '')).status, 200);
-  assert.equal((await call(h, 'GET', '/api/prehled', null, '')).status, 401);
-  assert.equal((await call(h, 'GET', '/api/prehled', null, 'spatny')).status, 401);
-  const h2 = createHandler({ db: mockDb(), appKey: '' });
-  assert.equal((await call(h2, 'GET', '/api/prehled')).status, 500);
+test('health', async () => {
+  const h = createHandler({ db: mockDb() });
+  const r = await call(h, 'GET', '/api/health');
+  assert.equal(r.status, 200); assert.equal((await r.json()).ok, true);
 });
 
 test('prehled: faktury + tp + odběratelé, převod řádků', async () => {
   const db = mockDb();
-  const h = createHandler({ db, appKey: KEY });
+  const h = createHandler({ db });
   const r = await call(h, 'GET', '/api/prehled');
   assert.equal(r.status, 200);
   const j = await r.json();
@@ -61,7 +57,7 @@ test('prehled: faktury + tp + odběratelé, převod řádků', async () => {
 
 test('prehled?cast=odberatele nečte faktury ani TP', async () => {
   const db = mockDb();
-  const h = createHandler({ db, appKey: KEY });
+  const h = createHandler({ db });
   const j = await (await call(h, 'GET', '/api/prehled?cast=odberatele')).json();
   assert.equal(j.faktury, undefined); assert.equal(j.tp, undefined); assert.ok(j.odberatele);
   assert.ok(!db.calls.some(c => /SaldoDO|Salda_TrvalePrikazy/.test(c.sql)));
@@ -69,7 +65,7 @@ test('prehled?cast=odberatele nečte faktury ani TP', async () => {
 
 test('trvalé příkazy: vytvořit, upravit, smazat (parametrizovaně, firma se kontroluje)', async () => {
   const db = mockDb();
-  const h = createHandler({ db, appKey: KEY });
+  const h = createHandler({ db });
   let r = await call(h, 'POST', '/api/tp/centrum', { popis: 'Test', frekvence: 'Měsíční', castka: '1234.5', datum: '2026-10-01' });
   assert.equal(r.status, 201);
   let j = await r.json(); assert.equal(j.zaznam.id, 7); assert.equal(j.zaznam.castka, 1234.5); assert.equal(j.zaznam.firma, 'centrum');

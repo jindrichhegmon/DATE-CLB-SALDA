@@ -91,36 +91,17 @@
   .tpgrid td.num input { text-align: right; }
   .tp-msg { min-height: 18px; font-size: 12.5px; color: var(--ink-2); margin: 6px 0; }
   .tp-msg.err { color: var(--danger); }
-  #gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
-  #gate[hidden] { display: none; }
-  .gate-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; max-width: 420px; width: 100%; box-shadow: var(--shadow); }
-  .gate-card h2 { margin: 0 0 6px; font-size: 18px; }
-  .gate-card p { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; }
-  .gate-card input { width: 100%; font: inherit; font-size: 15px; letter-spacing: .08em; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--ink); }
-  .gate-card .btn { width: 100%; margin-top: 12px; padding: 10px; }
-  .gate-err { min-height: 18px; color: var(--danger); font-size: 12.5px; margin-top: 8px; }
   footer.foot { color: var(--ink-3); font-size: 11.5px; margin-top: 24px; line-height: 1.5; }
   [hidden] { display: none !important; }
   @media (max-width: 640px) { .bars { grid-template-columns: 1fr; } .bars .n { text-align: left; } header.top .status { margin-left: 0; } }
 </style>
 </head>
 <body>
-<div id="gate">
-  <form class="gate-card" id="gateForm">
-    <h2>Salda — Centrum &amp; Datec</h2>
-    <p>Zadejte přístupový klíč aplikace. Ověří ho server a v tomto prohlížeči se uloží, příště už nebude potřeba.</p>
-    <input id="gateInput" type="password" autocomplete="off" spellcheck="false" aria-label="Přístupový klíč">
-    <div class="gate-err" id="gateErr"></div>
-    <button class="btn primary" type="submit" id="gateBtn">Odemknout</button>
-  </form>
-</div>
-
-<div class="wrap" id="app" hidden>
+<div class="wrap" id="app">
   <header class="top">
     <div><h1>Salda — Centrum &amp; Datec</h1><div class="sub">saldokonto CLB1 · trvalé příkazy · kalendář plateb</div></div>
     <span class="status" id="status"><span class="dot"></span><span id="statusText">načítám…</span></span>
     <button class="btn ghost" id="refreshBtn" title="Znovu načíst z databáze">Obnovit</button>
-    <button class="btn ghost" id="logoutBtn" title="Zapomenout přístupový klíč">Odhlásit</button>
   </header>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="dod" aria-selected="true">Dodavatelé — závazky</button>
@@ -194,10 +175,9 @@
 "use strict";
 /* =============================================================================
    Salda — Centrum & Datec · frontend
-   Backend: /api (Netlify Function) – čte CLB1 přímo, přístup chrání klíč aplikace (hlavička x-app-key).
+   Backend: /api (Netlify Function) – čte CLB1 přímo. Bez přihlášení, data nejsou tajná.
    ============================================================================= */
 const FIRMA = { centrum: "Centrum", datec: "Datec" };
-const KEY_STORE = "salda.appKey";
 const TAB_STORE = "salda.tab";
 const FREQS = ["Měsíční", "Čtvrtletní", "Pololetní", "Roční", "Týdenní", "14 dní", "Jednorázově"];
 const KIND = { TP: { label: "Trvalý příkaz", color: "var(--tp)" }, SA: { label: "Faktura", color: "var(--sa)" }, PR: { label: "Příjem", color: "var(--pr)" } };
@@ -257,21 +237,19 @@ function nextOccurrence(startIso, freq) {
 
 /* ---------- API ---------- */
 const api = {
-  key() { return store.get(KEY_STORE) || ""; },
-  async call(method, path, body, keyOverride) {
+  async call(method, path, body) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 45000);
     let resp, text;
     try {
       resp = await fetch(path, { method, cache: "no-store", signal: ctrl.signal,
-        headers: { "x-app-key": keyOverride != null ? keyOverride : this.key(), ...(body ? { "Content-Type": "application/json" } : {}) },
+        headers: body ? { "Content-Type": "application/json" } : {},
         body: body ? JSON.stringify(body) : undefined });
       text = await resp.text();
     } catch (e) {
       throw new Error(e && e.name === "AbortError" ? "Server neodpověděl do 45 s." : "Server je nedostupný (" + (e && e.message ? e.message : e) + ").");
     } finally { clearTimeout(timer); }
     let data = null; try { data = text ? JSON.parse(text) : null; } catch (e) { /* níže */ }
-    if (resp.status === 401) { const err = new Error("Neplatný přístupový klíč."); err.unauthorized = true; throw err; }
     if (!resp.ok || !data || data.ok !== true) throw new Error((data && data.error) || ("HTTP " + resp.status + " – " + String(text || "").slice(0, 160)));
     return data;
   }
@@ -304,7 +282,6 @@ async function load() {
     setStatus("live", "Živá data z CLB1 · " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }));
   } catch (e) {
     if (seq !== loadSeq) return;
-    if (e.unauthorized) { logout("Přístupový klíč už neplatí, zadejte ho znovu."); return; }
     setStatus("err", state.data ? "Obnovení selhalo, zobrazena data z " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "Data se nepodařilo načíst");
     notice("Načtení z databáze se nezdařilo: " + e.message + "\nZkuste Obnovit. Pokud problém trvá, zkontrolujte na Netlify proměnné SQL_* a dostupnost SQL Serveru.");
   } finally { if (seq === loadSeq) $("refreshBtn").disabled = false; }
@@ -555,7 +532,7 @@ seg("tpFirma", v => { state.tp.firma = v; state.tp.editing = state.tp.adding = s
 $("tpAddBtn").addEventListener("click", () => { state.tp.adding = "TP"; state.tp.editing = null; tpMsg(""); renderTp(); });
 $("tpAddIncBtn").addEventListener("click", () => { state.tp.adding = "PR"; state.tp.editing = null; tpMsg(""); renderTp(); });
 
-/* ===================== záložky, brána, start ===================== */
+/* ===================== záložky a start ===================== */
 function showTab(tab) {
   if (!["dod", "odb", "tp"].includes(tab)) tab = "dod";
   state.tab = tab; store.set(TAB_STORE, tab);
@@ -564,29 +541,14 @@ function showTab(tab) {
 }
 document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); });
 $("refreshBtn").addEventListener("click", () => load());
-$("logoutBtn").addEventListener("click", () => logout(""));
 
-function logout(msg) {
-  store.del(KEY_STORE); state.data = null;
-  $("app").hidden = true; $("gate").hidden = false; $("gateErr").textContent = msg || ""; $("gateInput").value = ""; $("gateInput").focus();
-}
 async function startApp() {
-  $("gate").hidden = true; $("app").hidden = false;
   [state.dod.from, state.dod.to] = presetRange(state.dod.preset); $("dodFrom").value = state.dod.from; $("dodTo").value = state.dod.to;
   showTab(store.get(TAB_STORE) || "dod");
   renderAll();
   await load();
 }
-$("gateForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const key = $("gateInput").value.trim();
-  if (!key) { $("gateErr").textContent = "Zadejte klíč."; return; }
-  $("gateBtn").disabled = true; $("gateErr").textContent = "Ověřuji…";
-  try { await api.call("GET", "/api/tp", null, key); store.set(KEY_STORE, key); $("gateErr").textContent = ""; startApp(); }
-  catch (err) { $("gateErr").textContent = err.unauthorized ? "Neplatný klíč, zkuste to znovu." : "Ověření se nezdařilo: " + err.message; }
-  finally { $("gateBtn").disabled = false; }
-});
-if (api.key()) startApp(); else $("gateInput").focus();
+startApp();
 </script>
 </body>
 </html>

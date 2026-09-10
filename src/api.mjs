@@ -8,36 +8,25 @@
  *   PUT    /api/tp/:firma/:id                             { popis, frekvence, castka, datum } → { zaznam }
  *   DELETE /api/tp/:firma/:id                             → { id, smazano }
  *
- * Každé volání kromě /api/health musí mít hlavičku x-app-key rovnou APP_KEY (přístupový klíč aplikace).
- * Frontend i funkce jsou na stejném webu, takže CORS není potřeba.
+ * Bez přihlášení – data nejsou tajná. Frontend i funkce jsou na stejném webu, takže CORS není potřeba.
  */
-import { timingSafeEqual } from 'node:crypto';
 import * as salda from './salda.mjs';
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 
-function keyOk(req, expected) {
-  const given = req.headers.get('x-app-key') || '';
-  if (!expected || !given) return false;
-  const a = Buffer.from(given), b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 async function body(req) {
   try { return await req.json(); } catch { throw Object.assign(new Error('Tělo požadavku musí být JSON.'), { status: 400 }); }
 }
 
-/** @param {{ db: {query,exec}, appKey: string }} deps */
-export function createHandler({ db, appKey }) {
+/** @param {{ db: {query,exec} }} deps */
+export function createHandler({ db }) {
   return async function handle(req) {
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, '');
     const method = req.method.toUpperCase();
 
     if (path === '/api/health') return json({ ok: true, cas: new Date().toISOString() });
-    if (!appKey) return json({ ok: false, error: 'Na serveru není nastaven APP_KEY.' }, 500);
-    if (!keyOk(req, appKey)) return json({ ok: false, error: 'Neplatný přístupový klíč.' }, 401);
 
     try {
       if (path === '/api/prehled' && method === 'GET') {

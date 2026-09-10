@@ -2,6 +2,6 @@
 import { createHandler } from '../../src/api.mjs';
 import { db } from '../../src/db.mjs';
 
-const handle = createHandler({ db, appKey: (process.env.APP_KEY || '').trim() });
+const handle = createHandler({ db });
 export default async (req) => handle(req);
 export const config = { path: ['/api', '/api/*'] };
