@@ -5,7 +5,7 @@
   "description": "Salda Centrum & Datec – přehled závazků, pohledávek a trvalých příkazů přímo z SQL (CLB1), Netlify web s vlastními funkcemi",
   "type": "module",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.mjs",
     "dev": "npx netlify dev"
   },
   "dependencies": {
