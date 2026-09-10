@@ -1,5 +1,10 @@
 /**
- * Připojení k SQL Serveru (CLB1). Jeden sdílený pool na teplou instanci funkce.
+ * Připojení k SQL Serveru – pojmenovaná spojení, každé s vlastním poolem (drží se v teplé instanci).
+ *
+ *   clb1       … CLB1 (trvalé příkazy)          – proměnné SQL_SERVER / SQL_USER / SQL_PASSWORD / SQL_DATABASE
+ *   helios005  … Helios005 = Centrum (saldokonto) – DB_HELIOS005_DATABASE / _USER / _PASSWORD (server/port ze SQL_SERVER, SQL_PORT)
+ *   helios004  … Helios004 = Datec (saldokonto)   – DB_HELIOS004_DATABASE / _USER / _PASSWORD
+ *
  * Parametry vždy přes @nazev – hodnoty se nikdy nelepí do textu dotazu.
  */
 import sql from 'mssql';
@@ -7,30 +12,37 @@ import sql from 'mssql';
 const env = (k, d = '') => (process.env[k] ?? d).toString().trim();
 const bool = (k, d) => { const v = env(k); return v === '' ? d : /^(1|true|yes|ano)$/i.test(v); };
 
-export function dbConfig() {
+export function dbConfig(name = 'clb1') {
+  const key = String(name).toUpperCase();
+  const P = 'DB_' + key + '_';
+  const named = env(P + 'USER') !== '';
   const cfg = {
-    server: env('SQL_SERVER'),
-    port: Number(env('SQL_PORT', '1433')),
-    database: env('SQL_DATABASE', 'CLB1'),
-    user: env('SQL_USER'),
-    password: env('SQL_PASSWORD'),
+    server: env(P + 'SERVER', env('SQL_SERVER')),
+    port: Number(env(P + 'PORT', env('SQL_PORT', '1433'))),
+    database: named ? env(P + 'DATABASE', key === 'CLB1' ? 'CLB1' : key) : env('SQL_DATABASE', 'CLB1'),
+    user: named ? env(P + 'USER') : (key === 'CLB1' ? env('SQL_USER') : ''),
+    password: named ? env(P + 'PASSWORD') : (key === 'CLB1' ? env('SQL_PASSWORD') : ''),
     connectionTimeout: 15000,
     requestTimeout: Number(env('SQL_TIMEOUT_MS', '20000')),
     pool: { max: 4, min: 0, idleTimeoutMillis: 60000 },
     options: { encrypt: bool('SQL_ENCRYPT', true), trustServerCertificate: bool('SQL_TRUST_CERT', true), enableArithAbort: true, useUTC: false },
   };
-  const missing = ['server', 'user', 'password'].filter(k => !cfg[k]);
-  if (missing.length) throw new Error('Chybí nastavení SQL (' + missing.map(k => 'SQL_' + k.toUpperCase()).join(', ') + ') v proměnných prostředí.');
+  const missing = [];
+  if (!cfg.server) missing.push('SQL_SERVER');
+  if (!cfg.user) missing.push(key === 'CLB1' ? 'SQL_USER' : P + 'USER');
+  if (!cfg.password) missing.push(key === 'CLB1' ? 'SQL_PASSWORD' : P + 'PASSWORD');
+  if (missing.length) throw new Error(`Chybí nastavení spojení ${name} (${missing.join(', ')}) v proměnných prostředí.`);
   return cfg;
 }
 
-let poolPromise = null;
-async function pool() {
-  if (!poolPromise) {
-    poolPromise = new sql.ConnectionPool(dbConfig()).connect();
-    poolPromise.catch(() => { poolPromise = null; });
+const pools = new Map();
+function pool(name) {
+  if (!pools.has(name)) {
+    const p = new sql.ConnectionPool(dbConfig(name)).connect();
+    p.catch(() => pools.delete(name));
+    pools.set(name, p);
   }
-  return poolPromise;
+  return pools.get(name);
 }
 
 function bind(request, params) {
@@ -44,17 +56,24 @@ function bind(request, params) {
   return request;
 }
 
-export const db = {
-  /** SELECT → pole objektů */
-  async query(text, params) {
-    const p = await pool();
-    const r = await bind(p.request(), params).query(text);
-    return r.recordset || [];
-  },
-  /** INSERT/UPDATE/DELETE → počet ovlivněných řádků */
-  async exec(text, params) {
-    const p = await pool();
-    const r = await bind(p.request(), params).query(text);
-    return (r.rowsAffected || []).reduce((a, b) => a + b, 0);
-  },
-};
+export function connection(name) {
+  return {
+    name,
+    /** SELECT → pole objektů */
+    async query(text, params) {
+      const p = await pool(name);
+      const r = await bind(p.request(), params).query(text);
+      return r.recordset || [];
+    },
+    /** INSERT/UPDATE/DELETE → počet ovlivněných řádků */
+    async exec(text, params) {
+      const p = await pool(name);
+      const r = await bind(p.request(), params).query(text);
+      return (r.rowsAffected || []).reduce((a, b) => a + b, 0);
+    },
+  };
+}
+
+/** Sada spojení, kterou dostává datová vrstva (viz salda.mjs) */
+export const dbs = { clb1: connection('clb1'), helios005: connection('helios005'), helios004: connection('helios004') };
+export const db = dbs.clb1;

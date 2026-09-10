@@ -99,7 +99,7 @@
 <body>
 <div class="wrap" id="app">
   <header class="top">
-    <div><h1>Salda — Centrum &amp; Datec</h1><div class="sub">saldokonto CLB1 · trvalé příkazy · kalendář plateb</div></div>
+    <div><h1>Salda — Centrum &amp; Datec</h1><div class="sub">saldokonto Helios · trvalé příkazy · kalendář plateb</div></div>
     <span class="status" id="status"><span class="dot"></span><span id="statusText">načítám…</span></span>
     <button class="btn ghost" id="refreshBtn" title="Znovu načíst z databáze">Obnovit</button>
   </header>
@@ -168,7 +168,7 @@
     </div>
   </section>
 
-  <footer class="foot">Zdroj: SQL Server CLB1 – saldokonto dodavatelů (CLBSaldoDO, DATECSaldoDO) a odběratelů (CLBSaldoOD, DATECSaldoOD), trvalé příkazy v tabulce Salda_TrvalePrikazy. Data se načítají přímo z databáze při každém otevření a obnovení. © 2026 Ing. Jindřich Hegmon — DATEC/CLB.</footer>
+  <footer class="foot">Zdroj: Helios (Helios005 = Centrum, Helios004 = Datec) – saldokonto dodavatelů (skupina 110) a odběratelů (skupina 210) z tabulky TabSaldo, neuhrazené položky bez ohledu na výši; trvalé příkazy v tabulce Salda_TrvalePrikazy (CLB1). Data se načítají přímo z databází při každém otevření a obnovení. © 2026 Ing. Jindřich Hegmon — DATEC/CLB.</footer>
 </div>
 
 <script>
@@ -280,12 +280,12 @@ async function load() {
     state.data = d; state.loadedAt = new Date();
     notice("");
     const n = (o) => o ? ((o.centrum || []).length + (o.datec || []).length) : 0;
-    setStatus("live", "Živá data z CLB1 · " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) +
+    setStatus("live", "Živá data z Heliosu · " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) +
       " · " + n(d.faktury) + " faktur, " + n(d.odberatele) + " pohledávek, " + n(d.tp) + " trvalých příkazů");
   } catch (e) {
     if (seq !== loadSeq) return;
     setStatus("err", state.data ? "Obnovení selhalo, zobrazena data z " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "Data se nepodařilo načíst");
-    notice("Načtení z databáze se nezdařilo: " + e.message + "\nZkuste Obnovit. Pokud problém trvá, zkontrolujte na Netlify proměnné SQL_* a dostupnost SQL Serveru.");
+    notice("Načtení z databáze se nezdařilo: " + e.message + "\nZkuste Obnovit. Pokud problém trvá, zkontrolujte na serveru soubor .env (SQL_* a DB_HELIOS00x_*) a dostupnost SQL Serveru.");
   } finally { if (seq === loadSeq) $("refreshBtn").disabled = false; }
   renderAll();
 }

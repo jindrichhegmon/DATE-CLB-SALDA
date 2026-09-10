@@ -1,7 +1,8 @@
 # Salda — Centrum & Datec
 
 Nová samostatná aplikace: přehled závazků (faktury dodavatelů + trvalé příkazy s kalendářem plateb),
-pohledávek za odběrateli a editace trvalých příkazů. Čte **přímo z SQL Serveru CLB1**, bez Make i Softr.
+pohledávek za odběrateli a editace trvalých příkazů. Saldokonto čte **přímo z Heliosu** (Helios005 = Centrum,
+Helios004 = Datec), trvalé příkazy z CLB1. Bez Make, Softr i exportů do Excelu.
 
 - **Frontend:** `public/index.html` (jeden soubor, bez knihoven).
 - **Backend:** `server.mjs` (Node, VPS) → `src/api.mjs` (HTTP vrstva) → `src/salda.mjs` (dotazy) → `src/db.mjs` (mssql pool).
@@ -10,11 +11,13 @@ pohledávek za odběrateli a editace trvalých příkazů. Čte **přímo z SQL 
   aplikace umí jen číst saldokonto a upravovat trvalé příkazy.
 
 ## Data
-| Co | Tabulka (CLB1) | Poznámka |
+| Co | Zdroj | Poznámka |
 |---|---|---|
-| Faktury dodavatelů | `dbo.CLBSaldoDO`, `dbo.DATECSaldoDO` | Název, Saldo 1, Datum splatnosti (DMR) – jen čtení |
-| Odběratelé | `dbo.CLBSaldoOD`, `dbo.DATECSaldoOD` | jen čtení; po/ve splatnosti podle dnešního data |
-| Trvalé příkazy | `dbo.Salda_TrvalePrikazy` | `sql/001_trvale_prikazy.sql`; kladná částka = výdaj, záporná = příjem |
+| Faktury dodavatelů | Helios `dbo.TabSaldo` skupina 110 + `dbo.TabCisOrg` | `Saldo_Ucet <> 0`, `CisloOrg > 0`, bez prahu částky; Saldo_Ucet = MD − Dal (u dodavatelů záporné) |
+| Odběratelé | Helios `dbo.TabSaldo` skupina 210 + `dbo.TabCisOrg` | po/ve splatnosti podle `DatumSplatno` a dnešního data |
+| Trvalé příkazy | CLB1 `dbo.Salda_TrvalePrikazy` | `sql/001_trvale_prikazy.sql`; kladná částka = výdaj, záporná = příjem |
+
+Helios se jen čte (login s právem čtení), zapisuje se pouze do tabulky trvalých příkazů v CLB1.
 
 Kalendář plateb: faktury podle splatnosti, trvalé příkazy rozepsané podle frekvence (týdenní, 14 dní, měsíční,
 čtvrtletní, pololetní, roční, jednorázově) do zvoleného období, počínaje dneškem.
@@ -34,7 +37,7 @@ DELETE /api/tp/:firma/:id
 ### Varianta A – VPS 95.216.201.2 (doporučeno: pevná IP, kterou firewall SQL Serveru pouští)
 Aplikace běží jako samostatný Node server (`server.mjs`, port 3091) za Caddy, vedle jhn-apps.
 1. Jednorázově na VPS: `mkdir -p /opt/datec-salda`, vytvořit `/opt/datec-salda/.env` podle `.env.example`
-   (SQL_* a `PORT=3091`), do `/etc/caddy/Caddyfile` přidat blok z `deploy/Caddyfile.snippet` a `systemctl reload caddy`.
+   (SQL_*, DB_HELIOS00x_* a `PORT=3091`), do `/etc/caddy/Caddyfile` přidat blok z `deploy/Caddyfile.snippet` a `systemctl reload caddy`.
 2. Z Macu ve složce projektu: `./deploy/vps-deploy.sh` (rsync, `npm install`, pm2 start/restart, kontrola `/api/health`).
 3. Web: `https://salda.95-216-201-2.sslip.io` (nebo vlastní doména z Caddyfile).
 
@@ -45,7 +48,7 @@ ale data vždy tečou přes VPS. Kód Netlify funkce je v `netlify/functions-sql
 1. Netlify projekt `datec-salda` propojit s tímto repozitářem (Site configuration → Build & deploy → Link repository).
    Build command a functions jsou v `netlify.toml`; `npm install` proběhne automaticky (závislost `mssql`).
 2. Proměnné prostředí (viz `.env.example`): `SQL_SERVER`, `SQL_PORT`, `SQL_DATABASE`, `SQL_USER`, `SQL_PASSWORD`,
-   `SQL_ENCRYPT`, `SQL_TRUST_CERT`, `SQL_TIMEOUT_MS`.
+   `SQL_ENCRYPT`, `SQL_TRUST_CERT`, `SQL_TIMEOUT_MS` a pro Helios `DB_HELIOS005_*`, `DB_HELIOS004_*`.
 3. Ověření: `https://datec-salda.netlify.app/api/health` → `{"ok":true}`; pak otevřít web.
 
 

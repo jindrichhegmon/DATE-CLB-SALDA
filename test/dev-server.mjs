@@ -15,12 +15,25 @@ let tp = [
   { id: 3, firma: 'CLB', popis: 'Jednorázová', frekvence: 'Jednorázově', castka: 100, datum: d(-1), zmeneno: null },
   { id: 4, firma: 'DATEC', popis: 'BMW X1', frekvence: 'Čtvrtletní', castka: 15654.79, datum: d(3), zmeneno: null },
 ];
-const mockDb = {
+const saldo = {
+  helios005: { '110': [{ nazev: 'Lékárna Baťov s.r.o.', saldo: -21703.52, splatnost: d(4), corg: 18, parovaci: '26009' }, { nazev: 'Michal Drobný', saldo: -10800, splatnost: d(400), corg: 215, parovaci: '1' }, { nazev: 'Drobná faktura', saldo: -129.95, splatnost: d(6), corg: 300, parovaci: '2' }],
+               '210': [{ nazev: 'Vojenská zdravotní pojišťovna', saldo: 5569, splatnost: '2025-02-28', corg: 32, parovaci: null }, { nazev: 'Mgr. Lenka Popovská', saldo: 3500, splatnost: d(20), corg: 40, parovaci: null }, { nazev: 'ViVi Holiday Homes SL', saldo: -1158.84, splatnost: d(-5), corg: 41, parovaci: null }] },
+  helios004: { '110': [{ nazev: 'Pražská energetika, a.s.', saldo: -13037, splatnost: d(10), corg: 5, parovaci: '19160850' }],
+               '210': [{ nazev: 'Centrum pro léčbu bolesti', saldo: 31500, splatnost: d(30), corg: 2, parovaci: null }] },
+};
+const helios = (name) => ({
   async query(sqlText, params) {
-    if (/FROM dbo\.CLBSaldoDO/.test(sqlText)) return [{ nazev: 'Lékárna Baťov s.r.o.', saldo: -21703.52, splatnost: d(4), corg: 18 }, { nazev: 'Michal Drobný', saldo: -10800, splatnost: d(400), corg: 215 }];
-    if (/FROM dbo\.DATECSaldoDO/.test(sqlText)) return [{ nazev: 'Pražská energetika, a.s.', saldo: -13037, splatnost: d(10), corg: 5 }];
-    if (/FROM dbo\.CLBSaldoOD/.test(sqlText)) return [{ nazev: 'Vojenská zdravotní pojišťovna', saldo: 5569, splatnost: '2025-02-28', corg: 32 }, { nazev: 'Mgr. Lenka Popovská', saldo: 3500, splatnost: d(20), corg: 40 }, { nazev: 'ViVi Holiday Homes SL', saldo: -1158.84, splatnost: d(-5), corg: 41 }];
-    if (/FROM dbo\.DATECSaldoOD/.test(sqlText)) return [{ nazev: 'Centrum pro léčbu bolesti', saldo: 31500, splatnost: d(30), corg: 2 }];
+    if (/SELECT DB_NAME\(\)/.test(sqlText)) return [{ db: name, server: 'MOCK', login: 'ro' }];
+    if (/SELECT COUNT\(\*\)/.test(sqlText)) return [{ n: 10, otevrenych: saldo[name.toLowerCase()][params.skupina].length }];
+    if (/FROM dbo\.TabSaldo/.test(sqlText)) return saldo[name.toLowerCase()][params.skupina] || [];
+    throw new Error('mock: neočekávaný dotaz ' + sqlText);
+  },
+  async exec() { throw new Error('mock: do Heliosu se nezapisuje'); },
+});
+const clb1 = {
+  async query(sqlText, params) {
+    if (/SELECT DB_NAME\(\)/.test(sqlText)) return [{ db: 'CLB1', server: 'MOCK', login: 'clb1_app' }];
+    if (/SELECT COUNT\(\*\)/.test(sqlText)) return [{ n: tp.length }];
     if (/^\s*INSERT INTO dbo\.Salda_TrvalePrikazy/.test(sqlText)) { const id = seq++; tp.push({ id, firma: params.firma, popis: params.popis, frekvence: params.frekvence, castka: params.castka, datum: params.datum, zmeneno: null }); return [{ id }]; }
     if (/WHERE Id = @id/.test(sqlText)) return tp.filter(r => r.id === params.id);
     if (/FROM dbo\.Salda_TrvalePrikazy/.test(sqlText)) return tp;
@@ -32,7 +45,8 @@ const mockDb = {
     throw new Error('mock: neočekávaný exec ' + sqlText);
   },
 };
-const handle = createHandler({ db: mockDb });
+const mockDbs = { clb1, helios005: helios('Helios005'), helios004: helios('Helios004') };
+const handle = createHandler({ dbs: mockDbs });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
 const server = http.createServer(async (req, res) => {

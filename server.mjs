@@ -21,8 +21,8 @@ try {
 } catch { /* .env není – použijí se proměnné prostředí */ }
 
 const { createHandler } = await import('./src/api.mjs');
-const { db } = await import('./src/db.mjs');
-const handle = createHandler({ db });
+const { dbs } = await import('./src/db.mjs');
+const handle = createHandler({ dbs });
 
 const PUBLIC = path.join(ROOT, 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
@@ -51,4 +51,4 @@ const server = http.createServer(async (req, res) => {
 
 const port = Number(process.env.PORT || 3091);
 const host = process.env.HOST || '127.0.0.1';
-server.listen(port, host, () => console.log(`Salda běží na http://${host}:${port}  (SQL ${process.env.SQL_SERVER || '?'}:${process.env.SQL_PORT || 1433}/${process.env.SQL_DATABASE || 'CLB1'})`));
+server.listen(port, host, () => console.log(`Salda běží na http://${host}:${port}  (SQL ${process.env.SQL_SERVER || '?'}: CLB1 + Helios005 + Helios004)`));
