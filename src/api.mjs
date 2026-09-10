@@ -2,6 +2,7 @@
  * HTTP vrstva (Netlify Functions v2: Request → Response), oddělená od Netlify kvůli testům.
  *
  *   GET    /api/health
+ *   GET    /api/diag                                      → databáze, server, počty řádků tabulek
  *   GET    /api/prehled?cast=dodavatele|odberatele|vse   → { faktury, odberatele, tp, generovano }
  *   GET    /api/tp                                        → { tp }
  *   POST   /api/tp/:firma                                 { popis, frekvence, castka, datum } → { zaznam }
@@ -37,6 +38,7 @@ export function createHandler({ db }) {
         return json({ ok: true, ...out });
       }
       if (path === '/api/tp' && method === 'GET') return json({ ok: true, tp: await salda.trvalePrikazy(db) });
+      if (path === '/api/diag' && method === 'GET') return json({ ok: true, ...(await salda.diagnostika(db)) });
 
       const m = path.match(/^\/api\/tp\/(centrum|datec)(?:\/(\d+))?$/);
       if (m) {

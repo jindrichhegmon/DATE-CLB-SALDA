@@ -279,7 +279,9 @@ async function load() {
     if (seq !== loadSeq) return;
     state.data = d; state.loadedAt = new Date();
     notice("");
-    setStatus("live", "Živá data z CLB1 · " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }));
+    const n = (o) => o ? ((o.centrum || []).length + (o.datec || []).length) : 0;
+    setStatus("live", "Živá data z CLB1 · " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) +
+      " · " + n(d.faktury) + " faktur, " + n(d.odberatele) + " pohledávek, " + n(d.tp) + " trvalých příkazů");
   } catch (e) {
     if (seq !== loadSeq) return;
     setStatus("err", state.data ? "Obnovení selhalo, zobrazena data z " + state.loadedAt.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }) : "Data se nepodařilo načíst");

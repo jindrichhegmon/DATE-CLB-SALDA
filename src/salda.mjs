@@ -40,6 +40,21 @@ export function firmaKey(v) {
   return k;
 }
 
+/** Diagnostika: kam jsme připojeni a kolik řádků tabulky mají (pro ladění nasazení) */
+export async function diagnostika(db) {
+  const info = (await db.query('SELECT DB_NAME() AS db, @@SERVERNAME AS server, SUSER_SNAME() AS login, SYSDATETIME() AS cas'))[0] || {};
+  const tabulky = {};
+  for (const [key, f] of Object.entries(FIRMY)) {
+    for (const [what, t] of [['faktury', f.faktury], ['odberatele', f.odberatele]]) {
+      const r = (await db.query(`SELECT COUNT(*) AS n, SUM(CASE WHEN [Saldo 1] IS NOT NULL AND [Saldo 1] <> 0 THEN 1 ELSE 0 END) AS nenulove FROM ${t}`))[0] || {};
+      tabulky[`${key}.${what}`] = { tabulka: t, radku: Number(r.n || 0), nenulovych: Number(r.nenulove || 0) };
+    }
+  }
+  const tp = (await db.query(`SELECT COUNT(*) AS n FROM ${TP}`))[0] || {};
+  tabulky.trvalePrikazy = { tabulka: TP, radku: Number(tp.n || 0) };
+  return { ...info, tabulky };
+}
+
 /** Faktury dodavatelů obou firem (celé saldokonto; období filtruje frontend) */
 export async function faktury(db) {
   const out = {};

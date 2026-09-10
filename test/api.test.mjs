@@ -14,6 +14,8 @@ function mockDb() {
     calls,
     async query(sqlText, params) {
       calls.push({ sql: sqlText.replace(/\s+/g, ' ').trim(), params });
+      if (/SELECT DB_NAME\(\)/.test(sqlText)) return [{ db: 'CLB1', server: 'SRV', login: 'clb1_app', cas: '2026-09-10' }];
+      if (/SELECT COUNT\(\*\)/.test(sqlText)) return [{ n: 3, nenulove: 2 }];
       if (/FROM dbo\.CLBSaldoDO/.test(sqlText)) return [{ nazev: 'Lékárna Baťov s.r.o.', saldo: -21703.52, splatnost: '2026-09-14', corg: 18 }];
       if (/FROM dbo\.DATECSaldoDO/.test(sqlText)) return [];
       if (/FROM dbo\.CLBSaldoOD/.test(sqlText)) return [{ nazev: 'Česká správa\nInstitut Zlín', saldo: 1114, splatnost: '2026-07-20', corg: 217 }];
@@ -80,6 +82,12 @@ test('trvalé příkazy: vytvořit, upravit, smazat (parametrizovaně, firma se 
   assert.equal(r.status, 400); assert.match((await r.json()).error, /popis/);
   r = await call(h, 'POST', '/api/tp/centrum', 'neni json'); assert.equal(r.status, 400);
   r = await call(h, 'GET', '/api/neco'); assert.equal(r.status, 404);
+});
+
+test('diag', async () => {
+  const h = createHandler({ db: mockDb() });
+  const j = await (await call(h, 'GET', '/api/diag')).json();
+  assert.equal(j.db, 'CLB1'); assert.equal(j.tabulky['centrum.faktury'].radku, 3); assert.equal(j.tabulky.trvalePrikazy.radku, 3);
 });
 
 test('validateTp', () => {
