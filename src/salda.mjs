@@ -14,15 +14,22 @@ export const FIRMY = {
 export const FREKVENCE = ['Měsíční', 'Čtvrtletní', 'Pololetní', 'Roční', 'Týdenní', '14 dní', 'Jednorázově'];
 const TP = 'dbo.Salda_TrvalePrikazy';
 
-/* [Datum splatnosti (DMR)] je text "MM/DD/YYYY hh:mm:ss" → převod na datum v SQL, ven jako "YYYY-MM-DD" */
+/* [Datum splatnosti (DMR)] je text, jak ho zapíše importní skript podle národního nastavení Windows:
+   "09/21/2026 00:00:00" (americký), "21.09.2026 0:00:00" (český) nebo "2026-09-21" (ISO).
+   Formát se pozná podle oddělovače, aby se u dnů do 12 neprohodil den a měsíc. Ven jde "YYYY-MM-DD". */
+const DATUM_SQL = `CASE
+    WHEN LTRIM(RTRIM(ISNULL([Datum splatnosti (DMR)], ''))) = '' THEN NULL
+    WHEN [Datum splatnosti (DMR)] LIKE '%.%' THEN TRY_CONVERT(datetime, [Datum splatnosti (DMR)], 104)
+    WHEN [Datum splatnosti (DMR)] LIKE '%/%' THEN TRY_CONVERT(datetime, [Datum splatnosti (DMR)], 101)
+    ELSE COALESCE(TRY_CONVERT(datetime, [Datum splatnosti (DMR)], 120), TRY_CONVERT(datetime, [Datum splatnosti (DMR)], 126)) END`;
 const saldoSql = (table) => `
   SELECT LTRIM(RTRIM(ISNULL([Název], N''))) AS nazev,
          [Saldo 1] AS saldo,
-         CONVERT(char(10), TRY_CONVERT(datetime, [Datum splatnosti (DMR)], 101), 23) AS splatnost,
+         CONVERT(char(10), ${DATUM_SQL}, 23) AS splatnost,
          [Č# org#] AS corg
   FROM ${table}
   WHERE [Saldo 1] IS NOT NULL AND [Saldo 1] <> 0
-  ORDER BY TRY_CONVERT(datetime, [Datum splatnosti (DMR)], 101), [Název]`;
+  ORDER BY ${DATUM_SQL}, [Název]`;
 
 const tpSql = `
   SELECT Id AS id, Firma AS firma, Popis AS popis, Frekvence AS frekvence, Castka AS castka,
