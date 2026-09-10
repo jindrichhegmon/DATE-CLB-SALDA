@@ -1,12 +1,17 @@
-# Salda Centrum & Datec – frontend (public/) + backend (netlify/functions/) v jednom Netlify projektu.
-# Proměnné prostředí (Site configuration → Environment variables): viz .env.example
+# Salda Centrum & Datec na Netlify.
+# SQL Server CLB1 pouští port 1433 jen z pevné IP adresy VPS (95.216.201.2), Netlify pevnou IP nemá.
+# Proto Netlify jen servíruje frontend (public/) a všechna volání /api přeposílá (proxy) na server běžící na VPS.
+# Kód Netlify funkce zůstává v netlify/functions-sql pro případ, že by firewall Netlify pustil:
+# pak přejmenovat zpět na netlify/functions a smazat blok [[redirects]].
 [build]
   publish = "public"
   command = "echo 'bez buildu'"
 
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["mssql", "tedious"]
+[[redirects]]
+  from = "/api/*"
+  to = "https://salda.95-216-201-2.sslip.io/api/:splat"
+  status = 200
+  force = true
 
 [[headers]]
   for = "/*"

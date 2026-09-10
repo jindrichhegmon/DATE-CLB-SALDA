@@ -4,8 +4,8 @@ Nová samostatná aplikace: přehled závazků (faktury dodavatelů + trvalé p�
 pohledávek za odběrateli a editace trvalých příkazů. Čte **přímo z SQL Serveru CLB1**, bez Make i Softr.
 
 - **Frontend:** `public/index.html` (jeden soubor, bez knihoven).
-- **Backend:** Netlify Function `netlify/functions/api.mjs` → `src/api.mjs` (HTTP vrstva) → `src/salda.mjs` (dotazy) → `src/db.mjs` (mssql pool).
-  Frontend i API běží na stejném webu, CORS se neřeší.
+- **Backend:** `server.mjs` (Node, VPS) → `src/api.mjs` (HTTP vrstva) → `src/salda.mjs` (dotazy) → `src/db.mjs` (mssql pool).
+  Frontend i API běží na stejné adrese, CORS se neřeší.
 - **Přístup:** bez přihlášení (data nejsou tajná). Heslo k databázi je jen v proměnných prostředí Netlify;
   aplikace umí jen číst saldokonto a upravovat trvalé příkazy.
 
@@ -38,8 +38,10 @@ Aplikace běží jako samostatný Node server (`server.mjs`, port 3091) za Caddy
 2. Z Macu ve složce projektu: `./deploy/vps-deploy.sh` (rsync, `npm install`, pm2 start/restart, kontrola `/api/health`).
 3. Web: `https://salda.95-216-201-2.sslip.io` (nebo vlastní doména z Caddyfile).
 
-### Varianta B – Netlify (funguje jen pokud SQL Server pustí port 1433 z libovolné adresy)
-Netlify nemá pevnou odchozí IP; při zavřeném firewallu funkce hlásí „SQL Server je nedostupný“.
+### Varianta B – Netlify jako průčelí (projekt `datec-salda`, propojený s tímto repozitářem)
+Netlify nemá pevnou odchozí IP a firewall SQL Serveru ho nepustí, proto Netlify jen servíruje `public/`
+a volání `/api/*` přeposílá na VPS (`[[redirects]]` v `netlify.toml`). Web tak funguje i na `datec-salda.netlify.app`,
+ale data vždy tečou přes VPS. Kód Netlify funkce je v `netlify/functions-sql` (nepoužívá se).
 1. Netlify projekt `datec-salda` propojit s tímto repozitářem (Site configuration → Build & deploy → Link repository).
    Build command a functions jsou v `netlify.toml`; `npm install` proběhne automaticky (závislost `mssql`).
 2. Proměnné prostředí (viz `.env.example`): `SQL_SERVER`, `SQL_PORT`, `SQL_DATABASE`, `SQL_USER`, `SQL_PASSWORD`,
@@ -53,5 +55,4 @@ npm install
 npm test                      # API + datová vrstva s mockem databáze
 node test/dev-server.mjs      # http://127.0.0.1:8787, data z mocku (bez SQL Serveru)
 npm start                     # samostatný server proti SQL (vyžaduje .env), http://127.0.0.1:3091
-npx netlify dev               # Netlify funkce proti SQL (vyžaduje .env)
 ```
