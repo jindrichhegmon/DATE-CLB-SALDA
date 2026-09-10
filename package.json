@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "dev": "npx netlify dev"
+    "dev": "npx netlify dev",
+    "start": "node server.mjs"
   },
   "dependencies": {
     "mssql": "^11.0.2"

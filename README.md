@@ -29,19 +29,29 @@ PUT    /api/tp/:firma/:id        {popis, frekvence, castka, datum}
 DELETE /api/tp/:firma/:id
 ```
 
-## Nasazení (Netlify)
+## Nasazení
+
+### Varianta A – VPS 95.216.201.2 (doporučeno: pevná IP, kterou firewall SQL Serveru pouští)
+Aplikace běží jako samostatný Node server (`server.mjs`, port 3091) za Caddy, vedle jhn-apps.
+1. Jednorázově na VPS: `mkdir -p /opt/datec-salda`, vytvořit `/opt/datec-salda/.env` podle `.env.example`
+   (SQL_* a `PORT=3091`), do `/etc/caddy/Caddyfile` přidat blok z `deploy/Caddyfile.snippet` a `systemctl reload caddy`.
+2. Z Macu ve složce projektu: `./deploy/vps-deploy.sh` (rsync, `npm install`, pm2 start/restart, kontrola `/api/health`).
+3. Web: `https://salda.95-216-201-2.sslip.io` (nebo vlastní doména z Caddyfile).
+
+### Varianta B – Netlify (funguje jen pokud SQL Server pustí port 1433 z libovolné adresy)
+Netlify nemá pevnou odchozí IP; při zavřeném firewallu funkce hlásí „SQL Server je nedostupný“.
 1. Netlify projekt `datec-salda` propojit s tímto repozitářem (Site configuration → Build & deploy → Link repository).
    Build command a functions jsou v `netlify.toml`; `npm install` proběhne automaticky (závislost `mssql`).
 2. Proměnné prostředí (viz `.env.example`): `SQL_SERVER`, `SQL_PORT`, `SQL_DATABASE`, `SQL_USER`, `SQL_PASSWORD`,
    `SQL_ENCRYPT`, `SQL_TRUST_CERT`, `SQL_TIMEOUT_MS`.
 3. Ověření: `https://datec-salda.netlify.app/api/health` → `{"ok":true}`; pak otevřít web.
 
-SQL Server musí přijímat spojení na portu 1433 z internetu (Netlify nemá pevnou IP) – stejně jako dnes u Make.
 
 ## Vývoj a testy
 ```
 npm install
 npm test                      # API + datová vrstva s mockem databáze
 node test/dev-server.mjs      # http://127.0.0.1:8787, data z mocku (bez SQL Serveru)
-npx netlify dev               # skutečné funkce proti SQL (vyžaduje .env)
+npm start                     # samostatný server proti SQL (vyžaduje .env), http://127.0.0.1:3091
+npx netlify dev               # Netlify funkce proti SQL (vyžaduje .env)
 ```

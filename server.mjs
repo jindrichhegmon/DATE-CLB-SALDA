@@ -1,0 +1,54 @@
+/**
+ * Samostatný server (bez Netlify): servíruje public/ a obsluhuje /api stejným handlerem jako Netlify funkce.
+ * Určeno pro VPS s pevnou IP adresou, kterou firewall SQL Serveru pouští.
+ *   node server.mjs            (čte .env ve složce aplikace; PORT, HOST viz .env.example)
+ */
+import http from 'node:http';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+
+/* .env bez závislosti na knihovně: KEY=value, řádky s # se přeskakují, proměnné z prostředí mají přednost */
+try {
+  const env = await readFile(path.join(ROOT, '.env'), 'utf8');
+  for (const line of env.split(/\r?\n/)) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!m || line.trim().startsWith('#')) continue;
+    if (process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^"(.*)"$/, '$1');
+  }
+} catch { /* .env není – použijí se proměnné prostředí */ }
+
+const { createHandler } = await import('./src/api.mjs');
+const { db } = await import('./src/db.mjs');
+const handle = createHandler({ db });
+
+const PUBLIC = path.join(ROOT, 'public');
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
+    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
+      const chunks = []; for await (const c of req) chunks.push(c);
+      const r = await handle(new Request(url, { method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks) }));
+      res.writeHead(r.status, Object.fromEntries(r.headers));
+      res.end(Buffer.from(await r.arrayBuffer()));
+      return;
+    }
+    const rel = path.normalize(decodeURIComponent(url.pathname)).replace(/^([/\\])+/, '');
+    const file = path.join(PUBLIC, rel === '' ? 'index.html' : rel);
+    if (!file.startsWith(PUBLIC)) { res.writeHead(403); res.end(); return; }
+    const data = await readFile(file);
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    res.end(data);
+  } catch (e) {
+    if (e && e.code === 'ENOENT') { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Nenalezeno'); }
+    else { console.error('[salda]', e); res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Chyba serveru'); }
+  }
+});
+
+const port = Number(process.env.PORT || 3091);
+const host = process.env.HOST || '127.0.0.1';
+server.listen(port, host, () => console.log(`Salda běží na http://${host}:${port}  (SQL ${process.env.SQL_SERVER || '?'}:${process.env.SQL_PORT || 1433}/${process.env.SQL_DATABASE || 'CLB1'})`));

@@ -1,0 +1,6 @@
+# Přidat do /etc/caddy/Caddyfile na VPS (vedle bloku pro jhn-apps) a `systemctl reload caddy`.
+# Adresa: buď vlastní doména (musí mířit na 95.216.201.2), nebo sslip.io s pomlčkovým prefixem.
+salda.95-216-201-2.sslip.io {
+    reverse_proxy 127.0.0.1:3091
+    encode gzip
+}
