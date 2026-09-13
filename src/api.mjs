@@ -27,7 +27,7 @@ export function createHandler({ dbs }) {
     const path = url.pathname.replace(/\/+$/, '');
     const method = req.method.toUpperCase();
 
-    if (path === '/api/health') return json({ ok: true, cas: new Date().toISOString() });
+    if (path === '/api/health') return json({ ok: true, cas: new Date().toISOString(), verze: process.env.APP_VERZE || '', commit: process.env.APP_COMMIT || '', vetev: process.env.APP_VETEV || '', nasazeno: process.env.APP_NASAZENO || '', spusteno: process.env.APP_SPUSTENO || '' });
 
     try {
       if (path === '/api/prehled' && method === 'GET') {

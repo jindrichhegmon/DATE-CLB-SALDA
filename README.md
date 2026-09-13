@@ -59,3 +59,10 @@ npm test                      # API + datová vrstva s mockem databáze
 node test/dev-server.mjs      # http://127.0.0.1:8787, data z mocku (bez SQL Serveru)
 npm start                     # samostatný server proti SQL (vyžaduje .env), http://127.0.0.1:3091
 ```
+
+## Verze – jak poznat, že běží poslední
+- V patičce stránky je řádek `web v1.1.0 (datum) · server v1.1.0 (commit …, nasazeno …, běží od …) ✓`.
+  Web = verze stránky z Netlify, server = verze Node serveru na VPS (`/api/health`). Když se liší, řádek zčervená
+  s textem „verze webu a serveru se liší“ – po změně kódu je potřeba nasadit obě strany (push do `main` + `./deploy/vps-deploy.sh`).
+- Verze se zvyšuje v `package.json` a v konstantě `WEB_VERZE` v patičce stránky (stejné číslo).
+- `deploy/vps-deploy.sh` zapíše `verze.json` (commit, větev, čas nasazení), server ji vrací v `/api/health`.

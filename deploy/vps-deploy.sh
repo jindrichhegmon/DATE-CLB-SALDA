@@ -8,6 +8,8 @@ DIR=/opt/datec-salda
 SSH="ssh -i $KEY -o BatchMode=yes"
 
 cd "$(dirname "$0")/.."
+# verze.json: co přesně se nasazuje (commit, větev, čas) – server ji vrací v /api/health
+printf '{"commit":"%s","vetev":"%s","nasazeno":"%s"}\n' "$(git rev-parse --short HEAD 2>/dev/null || echo ?)" "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ?)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > verze.json
 $SSH "$VPS" "mkdir -p $DIR && chown jhnapps:jhnapps $DIR"
 rsync -az -e "$SSH" --exclude node_modules --exclude .git --exclude .DS_Store --exclude .env --exclude .netlify ./ "$VPS:$DIR/"
 $SSH "$VPS" "chown -R jhnapps:jhnapps $DIR && su - jhnapps -c 'cd $DIR && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1 && (pm2 restart datec-salda --update-env 2>/dev/null || pm2 start deploy/ecosystem.config.cjs) && pm2 save && sleep 2 && curl -s localhost:3091/api/health'"

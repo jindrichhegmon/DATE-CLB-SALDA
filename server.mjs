@@ -20,6 +20,14 @@ try {
   }
 } catch { /* .env není – použijí se proměnné prostředí */ }
 
+/* verze serveru: package.json + verze.json (zapisuje deploy/vps-deploy.sh: commit, větev, čas nasazení) */
+try {
+  const pkg = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
+  process.env.APP_VERZE = pkg.version || '';
+  try { const v = JSON.parse(await readFile(path.join(ROOT, 'verze.json'), 'utf8')); process.env.APP_COMMIT = v.commit || ''; process.env.APP_VETEV = v.vetev || ''; process.env.APP_NASAZENO = v.nasazeno || ''; } catch { /* bez verze.json (lokální běh) */ }
+} catch { /* bez package.json */ }
+process.env.APP_SPUSTENO = new Date().toISOString();
+
 const { createHandler } = await import('./src/api.mjs');
 const { dbs } = await import('./src/db.mjs');
 const handle = createHandler({ dbs });

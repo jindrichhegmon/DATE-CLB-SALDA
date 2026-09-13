@@ -552,5 +552,27 @@ async function startApp() {
 }
 startApp();
 </script>
+<script>
+/* ---- verze aplikace: web (tato stránka) × server na VPS (/api/health) ---- */
+(function () {
+  var WEB_VERZE = "1.1.0", WEB_DATUM = "13. 9. 2026";
+  var f = document.querySelector('footer.jhn-copyright');
+  if (!f) { f = document.createElement('footer'); f.className = 'jhn-copyright'; f.style.cssText = 'margin-top:2rem;padding:1rem 0;text-align:center;font-size:.75rem;opacity:.55'; document.body.appendChild(f); }
+  var el = document.createElement('div');
+  el.id = 'verze-info';
+  el.style.cssText = 'margin-top:4px;font-family:ui-monospace,Menlo,monospace;font-size:.7rem;opacity:.9';
+  el.textContent = 'web v' + WEB_VERZE + ' (' + WEB_DATUM + ') · server: zjišťuji…';
+  f.appendChild(el);
+  var base = (typeof API_BASE !== 'undefined') ? API_BASE : '';
+  fetch(base + '/api/health', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (h) {
+    var sv = h && h.verze ? 'v' + h.verze : '?';
+    var det = h ? [h.commit ? 'commit ' + h.commit : '', h.nasazeno ? 'nasazeno ' + new Date(h.nasazeno).toLocaleString('cs-CZ') : '', h.spusteno ? 'běží od ' + new Date(h.spusteno).toLocaleString('cs-CZ') : ''].filter(Boolean).join(', ') : '';
+    var shoda = h && h.verze === WEB_VERZE;
+    el.textContent = 'web v' + WEB_VERZE + ' (' + WEB_DATUM + ') · server ' + sv + (det ? ' (' + det + ')' : '') + (shoda ? ' ✓' : ' ⚠ verze webu a serveru se liší');
+    if (!shoda) el.style.color = '#dc2626';
+    console.log('[verze] web', WEB_VERZE, 'server', h);
+  }).catch(function (e) { el.textContent = 'web v' + WEB_VERZE + ' (' + WEB_DATUM + ') · server nedostupný (' + (e && e.message ? e.message : e) + ')'; el.style.color = '#dc2626'; });
+})();
+</script>
 </body>
 </html>
