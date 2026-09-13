@@ -9,12 +9,14 @@
  *   PUT    /api/tp/:firma/:id                             { popis, frekvence, castka, datum } → { zaznam }
  *   DELETE /api/tp/:firma/:id                             → { id, smazano }
  *
- * Bez přihlášení – data nejsou tajná. Frontend i funkce jsou na stejném webu, takže CORS není potřeba.
+ * Bez přihlášení – data nejsou tajná. CORS je otevřený, protože /api volá i samostatná
+ * stránka Salda odběratelů (repozitář datec-saldoodberatele) z jiné domény.
  */
 import * as salda from './salda.mjs';
 
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Accept' };
 const json = (body, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...CORS } });
 
 async function body(req) {
   try { return await req.json(); } catch { throw Object.assign(new Error('Tělo požadavku musí být JSON.'), { status: 400 }); }
@@ -27,6 +29,7 @@ export function createHandler({ dbs }) {
     const path = url.pathname.replace(/\/+$/, '');
     const method = req.method.toUpperCase();
 
+    if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (path === '/api/health') return json({ ok: true, cas: new Date().toISOString(), verze: process.env.APP_VERZE || '', commit: process.env.APP_COMMIT || '', vetev: process.env.APP_VETEV || '', nasazeno: process.env.APP_NASAZENO || '', spusteno: process.env.APP_SPUSTENO || '' });
 
     try {

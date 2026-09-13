@@ -122,3 +122,12 @@ test('validateTp', () => {
   assert.throws(() => validateTp({ popis: 'A', frekvence: 'Měsíční', castka: 0, datum: '2026-01-31' }), /částku/);
   assert.throws(() => validateTp({ popis: 'A', frekvence: 'Měsíční', castka: 1, datum: '31.1.2026' }), /RRRR/);
 });
+
+test('CORS je otevřený – stránka Salda odběratelů volá API z jiné domény', async () => {
+  const handle = createHandler({ dbs: mockDbs() });
+  const r = await handle(new Request('http://x/api/prehled?cast=odberatele'));
+  assert.equal(r.headers.get('access-control-allow-origin'), '*');
+  const pre = await handle(new Request('http://x/api/prehled', { method: 'OPTIONS' }));
+  assert.equal(pre.status, 204);
+  assert.equal(pre.headers.get('access-control-allow-origin'), '*');
+});
