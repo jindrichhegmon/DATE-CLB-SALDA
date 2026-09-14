@@ -365,7 +365,15 @@ function renderDod() {
   else tiles.appendChild(tile("Nejbližší splatnost", "—", "žádná nadcházející"));
   shareBar("dodShare", "dodShareL", [{ label: "Trvalé příkazy", value: tp, color: KIND.TP.color }, { label: "Faktury", value: sa, color: KIND.SA.color }]);
   const both = state.dod.firma === "both";
-  bars("dodBars", items.filter(i => i.kind !== "PR").slice().sort((a, b) => b.amount - a.amount).slice(0, 8).map(i => ({ label: (both ? FIRMA[i.firma] + " · " : "") + i.name, amount: i.amount, kind: i.kind })), i => KIND[i.kind].color);
+  /* opakující se trvalý příkaz (např. měsíční v období přes dva měsíce) se v grafu sečte do jednoho řádku s počtem a termíny */
+  const grouped = new Map();
+  for (const i of items.filter(i => i.kind !== "PR")) {
+    const key = i.kind === "SA" ? "SA|" + i.firma + "|" + i.name + "|" + i.due + "|" + i.amount : "TP|" + i.firma + "|" + i.name + "|" + i.freq;
+    const g = grouped.get(key); if (g) { g.amount += i.amount; g.dues.push(i.due); } else grouped.set(key, { ...i, dues: [i.due] });
+  }
+  bars("dodBars", [...grouped.values()].sort((a, b) => b.amount - a.amount).slice(0, 8).map(i => ({
+    label: (both ? FIRMA[i.firma] + " · " : "") + i.name + (i.dues.length > 1 ? " · " + i.dues.length + "× (" + i.dues.map(d => fmtDate(d).replace(/ \d{4}$/, "")).join(", ") + ")" : ""),
+    amount: i.amount, kind: i.kind })), i => KIND[i.kind].color);
   for (const th of document.querySelectorAll("#tab-dod .firmCol")) th.hidden = !both;
   const q = state.dod.q.trim().toLowerCase();
   const list = items.filter(i => (state.dod.type === "all" || i.kind === state.dod.type) && (!q || i.name.toLowerCase().includes(q)));
