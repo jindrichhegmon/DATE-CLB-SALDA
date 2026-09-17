@@ -47,6 +47,7 @@ test('GET /api/platby-es: jen Helios004, parametry, mapování řádků', async 
   assert.equal(j.ok, true);
   assert.equal(j.od, '2025-01-01'); assert.equal(j.pocetPlateb, 2); assert.equal(j.pocetPrijmu, 5); assert.equal(j.klic, '');
   assert.equal(j.subjekty.length, SUBJEKTY.length); assert.equal(j.subjekty[0].klic, 'OLIN'); assert.equal(j.subjekty.at(-1).typ, 'P');
+  assert.equal(j.subjekty[0].limitDni, 30, 'OLIN: limit 30 dní'); assert.equal(j.subjekty.find(s => s.klic === 'GRAN MARBELLA').limitDni, 365); assert.equal(j.subjekty.at(-1).limitDni, null);
   assert.equal(dbs.calls.length, 1); assert.equal(dbs.calls[0].name, 'Helios004');
   assert.deepEqual(dbs.calls[0].params, { od: '2025-01-01', do: '2099-12-31', pocetPlateb: 2, pocetPrijmu: 5, klic: '' });
   assert.equal(j.polozky.length, 2);

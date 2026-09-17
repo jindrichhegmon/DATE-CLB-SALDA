@@ -100,6 +100,8 @@
   .es-section:first-child { margin-top: 0; }
   .es-section h3 { font-size: 13.5px; font-weight: 650; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .es-section h3 .grow { flex: 1; }
+  .es-section h3.es-late { color: var(--danger); }
+  .es-section h3 .es-late-note { font-size: 11.5px; font-weight: 500; color: var(--danger); }
   .es-section .es-sub { font-size: 11.5px; color: var(--ink-3); margin: 0 0 4px; }
   .es-none { font-size: 12.5px; color: var(--ink-3); padding: 6px 8px; border: 1px dashed var(--line); border-radius: 8px; }
   .es-mini { appearance: none; font: inherit; font-size: 11.5px; cursor: pointer; background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
@@ -632,6 +634,14 @@ function esProtistrana(r) {
   return r.nazevBanka || r.nazevUcto || "";
 }
 function esZprava(r) { return [r.zprava, r.popis].filter(Boolean).join(" · "); }
+function esLate(subj, rows) {
+  const limit = Number(subj.limitDni);
+  if (!(limit > 0)) return "";
+  const last = rows.map(r => String(r.datum || "")).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop();
+  if (!last) return "bez platby od " + fmtDate(es.od) + " (limit " + limit + " dní)";
+  const days = daysOverdue(last);
+  return days > limit ? "poslední platba před " + days + " dny (limit " + limit + " dní)" : "";
+}
 function esMini(label, title, onClick) { const b = el("button", "es-mini", label); b.type = "button"; if (title) b.title = title; b.addEventListener("click", onClick); return b; }
 
 function esRender() {
@@ -646,6 +656,9 @@ function esRender() {
     h.appendChild(document.createTextNode(expanded
       ? subj.nazev + " — všechny " + (income ? "příjmy" : "platby") + " od " + fmtDate(es.od) + " (" + rows.length + ")"
       : subj.nazev + (income ? " — posledních " + es.pocetPrijmu + " příjmů" : " — poslední " + es.pocetPlateb + " platby")));
+    /* červeně, když od poslední platby uplynulo víc dní než limit subjektu (nebo v období žádná platba není) */
+    const late = esLate(subj, rows);
+    if (late) { h.classList.add("es-late"); h.appendChild(el("span", "es-late-note", late)); }
     h.appendChild(el("span", "grow"));
     if (expanded) h.appendChild(esMini("Jen poslední", "Zpět na poslední pohyby", () => { es.rozbaleno[subj.klic] = false; esRender(); }));
     else h.appendChild(esMini("Všechny " + (income ? "příjmy" : "platby"), "Všechny pohyby tohoto subjektu od " + fmtDate(es.od), () => esLoadAll(subj.klic)));

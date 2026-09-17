@@ -10,15 +10,16 @@
  * (výpis a export do Excelu). Uživatelské hodnoty jdou výhradně parametry (@od, @do, @klic, …).
  */
 
-/** Subjekty v pořadí, v jakém se v reportu zobrazí. typ V = výdaj (platba dodavateli), P = příjem. */
+/** Subjekty v pořadí, v jakém se v reportu zobrazí. typ V = výdaj (platba dodavateli), P = příjem.
+ *  limitDni = po kolika dnech bez platby se má subjekt v reportu zvýraznit červeně (upozornění na zapomenutou platbu). */
 export const SUBJEKTY = [
-  { klic: 'OLIN',                    nazev: 'OLIN',                       popis: 'Olivenet Network — internet',                     typ: 'V', vzory: ['OLIN', '%OLIVENET%', '% OLIN%', 'OLIN %'] },
-  { klic: 'SAGESA',                  nazev: 'SAGESA',                     popis: 'Servicios de administración y gestión',           typ: 'V', vzory: ['%SAGESA%'] },
+  { klic: 'OLIN',                    nazev: 'OLIN',                       popis: 'Olivenet Network — internet',                     typ: 'V', limitDni: 30, vzory: ['OLIN', '%OLIVENET%', '% OLIN%', 'OLIN %'] },
+  { klic: 'SAGESA',                  nazev: 'SAGESA',                     popis: 'Servicios de administración y gestión',           typ: 'V', limitDni: 30, vzory: ['%SAGESA%'] },
   { klic: 'ENDESA',                  nazev: 'ENDESA',                     popis: 'Endesa Energía — elektřina',                      typ: 'V', vzory: ['%ENDESA%'] },
-  { klic: 'GESTAGUA',                nazev: 'GESTAGUA',                   popis: 'Gestión y Técnicas Agua — voda (GESAGUA)',        typ: 'V', vzory: ['%GESTAGUA%', '%GESAGUA%', '%GESTI% AGUA%', '%TECNICAS AGUA%'] },
-  { klic: 'ACOSOL',                  nazev: 'Acosol',                     popis: 'Acosol S.A. — voda a kanalizace',                 typ: 'V', vzory: ['%ACOSOL%'] },
-  { klic: 'RMF',                     nazev: 'RMF Andalusian Management',  popis: 'správa nemovitosti',                              typ: 'V', vzory: ['%RMF%ANDALUSIAN%', '%ANDALUSIAN MANAG%'] },
-  { klic: 'GRAN MARBELLA',           nazev: 'Gran Marbella Consulting',   popis: '',                                                typ: 'V', vzory: ['%GRAN MARBELLA%', '%MARBELLA CONSUL%'] },
+  { klic: 'GESTAGUA',                nazev: 'GESTAGUA',                   popis: 'Gestión y Técnicas Agua — voda (GESAGUA)',        typ: 'V', limitDni: 60, vzory: ['%GESTAGUA%', '%GESAGUA%', '%GESTI% AGUA%', '%TECNICAS AGUA%'] },
+  { klic: 'ACOSOL',                  nazev: 'Acosol',                     popis: 'Acosol S.A. — voda a kanalizace',                 typ: 'V', limitDni: 60, vzory: ['%ACOSOL%'] },
+  { klic: 'RMF',                     nazev: 'RMF Andalusian Management',  popis: 'správa nemovitosti',                              typ: 'V', limitDni: 30, vzory: ['%RMF%ANDALUSIAN%', '%ANDALUSIAN MANAG%'] },
+  { klic: 'GRAN MARBELLA',           nazev: 'Gran Marbella Consulting',   popis: '',                                                typ: 'V', limitDni: 365, vzory: ['%GRAN MARBELLA%', '%MARBELLA CONSUL%'] },
   { klic: 'AYUNTAMIENTO MIJAS',      nazev: 'Ayuntamiento de Mijas',      popis: 'radnice Mijas — daně a poplatky',                 typ: 'V', vzory: ['%AYUNTAMIENTO%MIJA%', '%AYTO%MIJA%', '%AYUDAMIENTO%MIJA%'] },
   { klic: 'AYUNTAMIENTO FUENGIROLA', nazev: 'Ayuntamiento de Fuengirola', popis: 'radnice Fuengirola — daně a poplatky',            typ: 'V', vzory: ['%AYUNTAMIENTO%FUEN%', '%AYTO%FUEN%', '%AYUDAMIENTO%FUEN%'] },
   { klic: 'VIVI HOME',               nazev: 'VIVI HOME',                  popis: 'ViVi Holiday Homes — příjmy z pronájmu',          typ: 'P', vzory: ['%VIVI%'] },
@@ -96,7 +97,7 @@ export async function platbyEs(dbs, input) {
     generovano: new Date().toISOString(),
     zdroj: 'Helios004 (DATEC) – bankovní výpisy dbo.TabBankVypisR',
     ...v,
-    subjekty: SUBJEKTY.map(({ klic, nazev, popis, typ }) => ({ klic, nazev, popis, typ })),
+    subjekty: SUBJEKTY.map(({ klic, nazev, popis, typ, limitDni }) => ({ klic, nazev, popis, typ, limitDni: limitDni || null })),
     polozky: (rows || []).map(r => ({
       id: r.id,
       klic: r.klic,

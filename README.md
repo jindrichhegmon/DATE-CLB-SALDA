@@ -32,7 +32,9 @@ kartou (PRIME VISA → Gestagua, Acosol).
 - **Všechny platby** u dodavatele vypíše všechny pohyby v období, ne jen poslední dvě.
 - **Excel** u sekce nebo **Export do Excelu** pro celý report: sešit .xlsx (knihovna SheetJS se načte z CDN až při
   prvním exportu; bez ní se uloží CSV, které Excel otevře). Částka CZK chybí u výpisů, které ještě nejsou zaúčtované.
-- Seznam dodavatelů a vzory hledání jsou v poli `SUBJEKTY` v `src/platby-es.mjs` (změna = nasazení serveru).
+- Nadpis subjektu je **červený**, když od poslední platby uplynulo víc dní než jeho limit (OLIN, SAGESA, RMF 30 dní;
+  Gestagua, Acosol 60 dní; Gran Marbella 1 rok), nebo když v období žádná platba není.
+- Seznam dodavatelů, vzory hledání i limity (`limitDni`) jsou v poli `SUBJEKTY` v `src/platby-es.mjs` (změna = nasazení serveru).
 
 Kalendář plateb: faktury podle splatnosti, trvalé příkazy rozepsané podle frekvence (týdenní, 14 dní, měsíční,
 čtvrtletní, pololetní, roční, jednorázově) do zvoleného období, počínaje dneškem.
