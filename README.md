@@ -21,7 +21,7 @@ Helios se jen čte (login s právem čtení), zapisuje se pouze do tabulky trval
 
 ## Platby Španělsko
 
-Záložka **Platby Španělsko** ukáže poslední dvě platby každému španělskému dodavateli (OLIN, SAGESA, ENDESA, AZUL,
+Záložka **Platby Španělsko** ukáže poslední dvě platby každému španělskému dodavateli (OLIN, SAGESA, ENDESA,
 GESTAGUA, Acosol, RMF Andalusian Management, Gran Marbella Consulting, Ayuntamiento de Mijas, Ayuntamiento de Fuengirola)
 a posledních pět příjmů od VIVI HOME. Zdrojem jsou **bankovní výpisy Datec v Heliosu** (Helios004, `dbo.TabBankVypisH` +
 `dbo.TabBankVypisR`, výpisy od roku 2024). Protistrana se hledá v názvu z banky (Helios ho zkracuje na 20 znaků), ve zprávě

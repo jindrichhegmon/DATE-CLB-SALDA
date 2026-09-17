@@ -15,7 +15,6 @@ export const SUBJEKTY = [
   { klic: 'OLIN',                    nazev: 'OLIN',                       popis: 'Olivenet Network — internet',                     typ: 'V', vzory: ['OLIN', '%OLIVENET%', '% OLIN%', 'OLIN %'] },
   { klic: 'SAGESA',                  nazev: 'SAGESA',                     popis: 'Servicios de administración y gestión',           typ: 'V', vzory: ['%SAGESA%'] },
   { klic: 'ENDESA',                  nazev: 'ENDESA',                     popis: 'Endesa Energía — elektřina',                      typ: 'V', vzory: ['%ENDESA%'] },
-  { klic: 'AZUL',                    nazev: 'AZUL',                       popis: '',                                                typ: 'V', vzory: ['%AZUL%'] },
   { klic: 'GESTAGUA',                nazev: 'GESTAGUA',                   popis: 'Gestión y Técnicas Agua — voda (GESAGUA)',        typ: 'V', vzory: ['%GESTAGUA%', '%GESAGUA%', '%GESTI% AGUA%', '%TECNICAS AGUA%'] },
   { klic: 'ACOSOL',                  nazev: 'Acosol',                     popis: 'Acosol S.A. — voda a kanalizace',                 typ: 'V', vzory: ['%ACOSOL%'] },
   { klic: 'RMF',                     nazev: 'RMF Andalusian Management',  popis: 'správa nemovitosti',                              typ: 'V', vzory: ['%RMF%ANDALUSIAN%', '%ANDALUSIAN MANAG%'] },
