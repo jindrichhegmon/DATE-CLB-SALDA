@@ -21,8 +21,28 @@ const saldo = {
   helios004: { '110': [{ nazev: 'Pražská energetika, a.s.', saldo: -13037, splatnost: d(10), corg: 5, parovaci: '19160850' }],
                '210': [{ nazev: 'Centrum pro léčbu bolesti', saldo: 31500, splatnost: d(30), corg: 2, parovaci: null }] },
 };
+const vypisy = [
+  { id: 65, klic: 'OLIN', typ: 'V', datum: '2026-08-05', castka: 61, mena: 'EUR', castka_czk: 1475.59, nazev_banka: 'Olin', nazev_ucto: 'OLIVENET NETWORK S.L.U.', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 59, klic: 'OLIN', typ: 'V', datum: '2026-07-16', castka: 61, mena: 'EUR', castka_czk: 1475.9, nazev_banka: 'Olin', nazev_ucto: 'OLIVENET NETWORK S.L.U.', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 40, klic: 'OLIN', typ: 'V', datum: '2026-06-08', castka: 61, mena: 'EUR', castka_czk: 1478.64, nazev_banka: 'Olin', nazev_ucto: '', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 70, klic: 'ENDESA', typ: 'V', datum: '2026-08-27', castka: 156.65, mena: 'EUR', castka_czk: null, nazev_banka: 'ENDESA ENERGIA, S.A.', nazev_ucto: '', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 0 },
+  { id: 63, klic: 'ENDESA', typ: 'V', datum: '2026-07-29', castka: 126.88, mena: 'EUR', castka_czk: 3069.86, nazev_banka: 'ENDESA ENERGIA, S.A.', nazev_ucto: '', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 53, klic: 'GESTAGUA', typ: 'V', datum: '2026-06-30', castka: 66.47, mena: 'EUR', castka_czk: 1612.56, nazev_banka: 'PRIME VISA - PLATEBN', nazev_ucto: 'GESTIÓN Y TÉCNICAS AGUA, S.A.', zprava: '', popis: '', vs: '11066852', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 49, klic: 'AYUNTAMIENTO MIJAS', typ: 'V', datum: '2025-06-17', castka: 629.81, mena: 'EUR', castka_czk: 15622.44, nazev_banka: 'AYUNTAMIENTO DE MIJA', nazev_ucto: '', zprava: '', popis: 'dan z nemovitosti Santa Barbara', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 30, klic: 'AYUNTAMIENTO MIJAS', typ: 'V', datum: '2025-04-07', castka: 77.58, mena: 'EUR', castka_czk: 1954.63, nazev_banka: 'AYUNTAMIENTO DE MIJA', nazev_ucto: '', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 20, klic: 'AYUNTAMIENTO MIJAS', typ: 'V', datum: '2025-03-24', castka: 629.81, mena: 'EUR', castka_czk: 15720.06, nazev_banka: 'AYUNTAMIENTO DE MIJA', nazev_ucto: '', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 71, klic: 'VIVI HOME', typ: 'P', datum: '2026-09-04', castka: 2858.5, mena: 'EUR', castka_czk: 69147.12, nazev_banka: 'VIVI HOLIDAY HOMES S.L.', nazev_ucto: 'ViVi Holiday Homes SL', zprava: 'Settlement August Luca', popis: 'ucetES9000810596680003255337', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+  { id: 66, klic: 'VIVI HOME', typ: 'P', datum: '2026-08-10', castka: 1120.42, mena: 'EUR', castka_czk: 27175.79, nazev_banka: 'VIVI HOLIDAY HOMES', nazev_ucto: 'ViVi Holiday Homes SL', zprava: '', popis: '', vs: '', ucet: '107-6522280297/0100', stav: 2 },
+];
+/* mock dotazu na bankovní výpisy: filtr období a subjektu, bez klic posledních N na subjekt */
+function vypisyMock(params) {
+  const v = vypisy.filter(r => r.datum >= params.od && r.datum <= params.do && (!params.klic || r.klic === params.klic));
+  if (params.klic) return v;
+  const n = {}; return v.filter(r => { n[r.klic] = (n[r.klic] || 0) + 1; return n[r.klic] <= (r.typ === 'P' ? params.pocetPrijmu : params.pocetPlateb); });
+}
 const helios = (name) => ({
   async query(sqlText, params) {
+    if (/FROM dbo\.TabBankVypisR/.test(sqlText)) return name === 'Helios004' ? vypisyMock(params) : [];
     if (/SELECT DB_NAME\(\)/.test(sqlText)) return [{ db: name, server: 'MOCK', login: 'ro' }];
     if (/SELECT COUNT\(\*\)/.test(sqlText)) return [{ n: 10, otevrenych: saldo[name.toLowerCase()][params.skupina].length }];
     if (/FROM dbo\.TabSaldo/.test(sqlText)) return saldo[name.toLowerCase()][params.skupina] || [];

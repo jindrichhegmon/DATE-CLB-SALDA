@@ -92,6 +92,24 @@
   .tp-msg { min-height: 18px; font-size: 12.5px; color: var(--ink-2); margin: 6px 0; }
   .tp-msg.err { color: var(--danger); }
   footer.foot { color: var(--ink-3); font-size: 11.5px; margin-top: 24px; line-height: 1.5; }
+  /* ---------- Platby Španělsko ---------- */
+  .es-meta { font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
+  .es-status { min-height: 18px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 8px; }
+  .es-status.err { color: var(--danger); }
+  .es-section { margin-top: 14px; }
+  .es-section:first-child { margin-top: 0; }
+  .es-section h3 { font-size: 13.5px; font-weight: 650; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .es-section h3 .grow { flex: 1; }
+  .es-section .es-sub { font-size: 11.5px; color: var(--ink-3); margin: 0 0 4px; }
+  .es-none { font-size: 12.5px; color: var(--ink-3); padding: 6px 8px; border: 1px dashed var(--line); border-radius: 8px; }
+  .es-mini { appearance: none; font: inherit; font-size: 11.5px; cursor: pointer; background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+  .es-mini:hover { border-color: var(--accent); }
+  .es-mini[disabled] { opacity: .5; cursor: default; }
+  .es-table td.inc { font-weight: 500; }
+  @media print {
+    header.top, nav.tabs, .toolbar, .es-mini, .notice, footer.jhn-copyright { display: none !important; }
+    .card { border: 0; box-shadow: none; padding: 0; }
+  }
   [hidden] { display: none !important; }
   @media (max-width: 640px) { .bars { grid-template-columns: 1fr; } .bars .n { text-align: left; } header.top .status { margin-left: 0; } }
 </style>
@@ -107,6 +125,7 @@
     <button role="tab" data-tab="dod" aria-selected="true">Dodavatelé — závazky</button>
     <button role="tab" data-tab="odb" aria-selected="false">Odběratelé — pohledávky</button>
     <button role="tab" data-tab="tp" aria-selected="false">Trvalé příkazy</button>
+    <button role="tab" data-tab="es" aria-selected="false" id="esTab">Platby Španělsko</button>
   </nav>
   <div class="notice" id="notice" hidden></div>
 
@@ -165,6 +184,23 @@
       <div class="tp-msg" id="tpMsg"></div>
       <div class="table-scroll"><table class="tpgrid"><thead><tr><th>Popis</th><th>Typ</th><th>Frekvence</th><th class="num">Částka</th><th>Datum platby</th><th></th></tr></thead><tbody id="tpBody"></tbody><tfoot id="tpFoot"></tfoot></table></div>
       <p class="muted" style="font-size:12px;margin:10px 0 0">Kladná částka = výdaj (trvalý příkaz), příjem se ukládá jako záporná. Datum platby je referenční termín; další termíny se v kalendáři odvozují z frekvence, počínaje dneškem.</p>
+    </div>
+  </section>
+
+  <!-- ===== Platby Španělsko ===== -->
+  <section id="tab-es" hidden>
+    <div class="toolbar">
+      <label>období od <input type="date" id="esOd" value="2025-01-01"></label>
+      <button class="btn ghost" id="esReload" title="Znovu načíst z Heliosu">Obnovit</button>
+      <span class="grow"></span>
+      <button class="btn" id="esExportAll" title="Uložit zobrazený report jako sešit Excelu">Export do Excelu</button>
+      <button class="btn ghost" id="esPrint" title="Vytisknout / uložit jako PDF">Tisk</button>
+    </div>
+    <div class="card">
+      <p class="es-meta">Poslední dvě platby každému španělskému dodavateli (OLIN, SAGESA, ENDESA, AZUL, GESTAGUA, Acosol, RMF Andalusian Management, Gran Marbella Consulting, Ayuntamiento de Mijas a de Fuengirola) a posledních pět příjmů od VIVI HOME — z bankovních výpisů DATEC v Heliosu. U každého dodavatele lze zobrazit všechny platby v období a uložit je do Excelu.</p>
+      <div class="es-status" id="esStatus"></div>
+      <div id="esBody"></div>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">Zdroj: Helios004 (Datec), bankovní výpisy (TabBankVypisR). Protistrana se hledá v názvu z banky, ve zprávě pro příjemce, v popisu i v organizaci ze spárované úhrady (platby kartou). Částka CZK = zaúčtovaná částka; chybí u výpisů, které ještě nejsou zaúčtované. Seznam dodavatelů je v souboru src/platby-es.mjs na serveru.</p>
     </div>
   </section>
 
@@ -542,12 +578,176 @@ seg("tpFirma", v => { state.tp.firma = v; state.tp.editing = state.tp.adding = s
 $("tpAddBtn").addEventListener("click", () => { state.tp.adding = "TP"; state.tp.editing = null; tpMsg(""); renderTp(); });
 $("tpAddIncBtn").addEventListener("click", () => { state.tp.adding = "PR"; state.tp.editing = null; tpMsg(""); renderTp(); });
 
+/* ===================== Platby Španělsko ===================== */
+/* Data: GET /api/platby-es?od=RRRR-MM-DD[&klic=…] – bankovní výpisy DATEC v Heliosu (src/platby-es.mjs).
+   Bez klic: posledních N pohybů na subjekt; s klic: všechny pohyby jednoho subjektu v období (výpis + Excel). */
+const ES_OD_DEFAULT = "2025-01-01";
+const ES_XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+const czk2 = new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const es = { od: ES_OD_DEFAULT, subjekty: [], polozky: [], vse: {}, rozbaleno: {}, generated: "", pocetPlateb: 2, pocetPrijmu: 5, loaded: false, busy: false };
+
+function esStatus(msg, err) { const e = $("esStatus"); e.textContent = msg || ""; e.classList.toggle("err", !!err); }
+function esOd() { const v = $("esOd").value; return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ES_OD_DEFAULT; }
+function esQuery(params) { const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (v != null && v !== "") q.set(k, String(v)); return "/api/platby-es?" + q.toString(); }
+
+async function esLoad() {
+  if (es.busy) return;
+  es.busy = true; es.od = esOd();
+  $("esReload").disabled = true;
+  esStatus("Načítám bankovní výpisy DATEC od " + fmtDate(es.od) + "…");
+  try {
+    const r = await api.call("GET", esQuery({ od: es.od }));
+    es.subjekty = r.subjekty || []; es.polozky = r.polozky || [];
+    es.vse = {}; es.rozbaleno = {};
+    es.generated = r.generovano || ""; es.pocetPlateb = Number(r.pocetPlateb) || 2; es.pocetPrijmu = Number(r.pocetPrijmu) || 5;
+    es.loaded = true;
+    esStatus("Živá data z Heliosu (výpisy Datec) od " + fmtDate(es.od) + " · " + new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" }));
+  } catch (e) { esStatus("Nepodařilo se načíst: " + e.message, true); }
+  finally { es.busy = false; $("esReload").disabled = false; esRender(); }
+}
+/* všechny pohyby jednoho subjektu v období (rozbalení sekce) */
+async function esLoadAll(klic) {
+  if (es.busy) return;
+  es.busy = true;
+  esStatus("Načítám všechny platby: " + klic + " od " + fmtDate(es.od) + "…");
+  try {
+    const r = await api.call("GET", esQuery({ od: es.od, klic }));
+    es.vse[klic] = (r.polozky || []).filter(x => x.klic === klic);
+    es.rozbaleno[klic] = true;
+    esStatus("Živá data z Heliosu (výpisy Datec) od " + fmtDate(es.od) + " · " + klic + ": " + es.vse[klic].length + " pohybů");
+  } catch (e) { esStatus("Nepodařilo se načíst všechny platby: " + e.message, true); }
+  finally { es.busy = false; esRender(); }
+}
+function esRowsFor(subj) { return es.rozbaleno[subj.klic] && es.vse[subj.klic] ? es.vse[subj.klic] : es.polozky.filter(r => r.klic === subj.klic); }
+function esNum(v) { return (v == null || v === "" || !isFinite(Number(v))) ? null : Number(v); }
+function esFmtCur(v, mena) {
+  if (v == null) return "";
+  try { return new Intl.NumberFormat("cs-CZ", { style: "currency", currency: mena || "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v); }
+  catch (e) { return v.toFixed(2) + " " + (mena || ""); }
+}
+/* platba kartou: banka hlásí jen "PRIME VISA - PLATEBNI KARTY", skutečný příjemce je v organizaci ze spárované úhrady */
+function esKartou(r) { return /PLATEBN|PRIME VISA|PRIME MC/i.test(r.nazevBanka || ""); }
+function esProtistrana(r) {
+  if (esKartou(r)) return r.nazevUcto ? r.nazevUcto + " (kartou)" : (r.zprava || r.nazevBanka || "");
+  return r.nazevBanka || r.nazevUcto || "";
+}
+function esZprava(r) { return [r.zprava, r.popis].filter(Boolean).join(" · "); }
+function esMini(label, title, onClick) { const b = el("button", "es-mini", label); b.type = "button"; if (title) b.title = title; b.addEventListener("click", onClick); return b; }
+
+function esRender() {
+  const body = $("esBody"); body.replaceChildren();
+  if (!es.loaded) { if (!es.busy) body.appendChild(el("div", "empty", "Data nejsou načtena.")); return; }
+  for (const subj of es.subjekty) {
+    const rows = esRowsFor(subj);
+    const income = subj.typ === "P";
+    const expanded = !!es.rozbaleno[subj.klic];
+    const sec = el("section", "es-section");
+    const h = el("h3"); const k = el("span", "key"); k.style.background = income ? KIND.PR.color : KIND.SA.color; h.appendChild(k);
+    h.appendChild(document.createTextNode(expanded
+      ? subj.nazev + " — všechny " + (income ? "příjmy" : "platby") + " od " + fmtDate(es.od) + " (" + rows.length + ")"
+      : subj.nazev + (income ? " — posledních " + es.pocetPrijmu + " příjmů" : " — poslední " + es.pocetPlateb + " platby")));
+    h.appendChild(el("span", "grow"));
+    if (expanded) h.appendChild(esMini("Jen poslední", "Zpět na poslední pohyby", () => { es.rozbaleno[subj.klic] = false; esRender(); }));
+    else h.appendChild(esMini("Všechny " + (income ? "příjmy" : "platby"), "Všechny pohyby tohoto subjektu od " + fmtDate(es.od), () => esLoadAll(subj.klic)));
+    const bx = esMini("Excel", "Uložit zobrazené řádky do Excelu", () => esExportRows(rows, subj)); if (!rows.length) bx.disabled = true; h.appendChild(bx);
+    sec.appendChild(h);
+    const names = Array.from(new Set(rows.map(esProtistrana).filter(Boolean)));
+    const subTxt = [subj.popis, names.length ? "ve výpisech: " + names.slice(0, 4).join(", ") + (names.length > 4 ? " …" : "") : ""].filter(Boolean).join(" · ");
+    if (subTxt) sec.appendChild(el("div", "es-sub", subTxt));
+    if (!rows.length) { sec.appendChild(el("div", "es-none", "V bankovních výpisech Datec od " + fmtDate(es.od) + " nebyla nalezena žádná " + (income ? "přijatá platba" : "platba") + " s tímto názvem.")); body.appendChild(sec); continue; }
+    const wrap = el("div", "table-scroll"); const tbl = el("table", "es-table"); const thead = el("thead"); const hr = el("tr");
+    for (const [txt, cls] of [["Datum", ""], ["Protistrana", ""], ["Zpráva / popis", ""], ["Částka (měna)", "num"], ["Částka CZK", "num"]]) hr.appendChild(el("th", cls || null, txt));
+    thead.appendChild(hr); tbl.appendChild(thead);
+    const tbody = el("tbody"); let sumCzk = 0, czkOk = true, sumCur = 0, curOk = true, mena = "";
+    for (const r of rows) {
+      const czkAmt = esNum(r.castkaCzk), curAmt = esNum(r.castka);
+      const tr = el("tr");
+      tr.appendChild(el("td", "date", /^\d{4}-\d{2}-\d{2}$/.test(String(r.datum)) ? fmtDate(r.datum) : String(r.datum || "")));
+      const tdN = el("td", null, esProtistrana(r) || "(bez názvu)");
+      if (r.nazevUcto && r.nazevBanka && r.nazevUcto !== r.nazevBanka) tdN.title = "Z banky: " + r.nazevBanka + " · v účetnictví: " + r.nazevUcto;
+      tr.appendChild(tdN);
+      const z = esZprava(r); tr.appendChild(el("td", z ? null : "muted", z));
+      tr.appendChild(el("td", "num" + (income ? " inc" : ""), esFmtCur(curAmt, r.mena)));
+      const tdK = el("td", "num" + (income ? " inc" : ""));
+      if (czkAmt == null) { tdK.textContent = "—"; tdK.title = "Výpis ještě není zaúčtován"; tdK.classList.add("muted"); czkOk = false; } else { tdK.textContent = czk2.format(czkAmt); sumCzk += czkAmt; }
+      tr.appendChild(tdK); tbody.appendChild(tr);
+      if (curAmt == null || (mena && r.mena !== mena)) curOk = false; else { mena = r.mena; sumCur += curAmt; }
+    }
+    tbl.appendChild(tbody);
+    if (rows.length > 1) {
+      const tfoot = el("tfoot"); const fr = el("tr");
+      const a = el("td", null, "Celkem (" + rows.length + ")" + (czkOk ? "" : " · CZK jen ze zaúčtovaných")); a.colSpan = 3;
+      fr.append(a, el("td", "num", curOk ? esFmtCur(sumCur, mena) : ""), el("td", "num", czk2.format(sumCzk))); tfoot.appendChild(fr); tbl.appendChild(tfoot);
+    }
+    wrap.appendChild(tbl); sec.appendChild(wrap); body.appendChild(sec);
+  }
+}
+
+/* ---------- export do Excelu (SheetJS z CDN až při prvním exportu; bez něj CSV) ---------- */
+let esXlsxPromise = null;
+function esLoadXlsx() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (esXlsxPromise) return esXlsxPromise;
+  esXlsxPromise = new Promise((resolve, reject) => {
+    const sc = document.createElement("script"); sc.src = ES_XLSX_URL; sc.async = true;
+    const t = setTimeout(() => { esXlsxPromise = null; reject(new Error("timeout")); }, 15000);
+    sc.onload = () => { clearTimeout(t); if (window.XLSX) resolve(window.XLSX); else { esXlsxPromise = null; reject(new Error("XLSX chybí")); } };
+    sc.onerror = () => { clearTimeout(t); esXlsxPromise = null; reject(new Error("knihovnu se nepodařilo načíst")); };
+    document.head.appendChild(sc);
+  });
+  return esXlsxPromise;
+}
+const ES_EXPORT_HEAD = ["Subjekt", "Typ", "Datum", "Protistrana (účetnictví)", "Protistrana (banka)", "Zpráva pro příjemce", "Popis", "Částka", "Měna", "Částka CZK", "VS", "Účet", "Stav výpisu"];
+function esExportRow(r, subj) {
+  return [subj ? subj.nazev : r.klic, r.typ === "P" ? "příjem" : "výdaj", r.datum, r.nazevUcto || "", r.nazevBanka || "", r.zprava || "", r.popis || "",
+          esNum(r.castka), r.mena || "", esNum(r.castkaCzk), r.vs || "", r.ucet || "", r.stav === 0 ? "nezaúčtováno" : "zaúčtováno"];
+}
+function esDownload(blob, filename) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+async function esSaveTable(aoa, filename, sheetName) {
+  try {
+    const XLSX = await esLoadXlsx();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = ES_EXPORT_HEAD.map((h, i) => ({ wch: Math.min(60, Math.max(h.length + 2, ...aoa.slice(1, 200).map(r => String(r[i] == null ? "" : r[i]).length + 2))) }));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, (sheetName || "Platby").slice(0, 31));
+    XLSX.writeFile(wb, filename + ".xlsx");
+    return "xlsx";
+  } catch (e) {
+    /* náhradní CSV (Excel ho otevře; BOM kvůli diakritice, středník kvůli českému Excelu) */
+    const esc = v => { const s = v == null ? "" : String(v); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    esDownload(new Blob(["﻿" + aoa.map(r => r.map(esc).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), filename + ".csv");
+    return "csv";
+  }
+}
+function esFileStamp() { return es.od.replace(/-/g, "") + "_" + today().replace(/-/g, ""); }
+async function esExportRows(rows, subj) {
+  if (!rows || !rows.length) return;
+  const fmt = await esSaveTable([ES_EXPORT_HEAD].concat(rows.map(r => esExportRow(r, subj))), "platby_" + subj.klic.replace(/\s+/g, "_").toLowerCase() + "_" + esFileStamp(), subj.nazev);
+  esStatus("Export " + subj.nazev + ": " + rows.length + " řádků (" + fmt.toUpperCase() + (fmt === "csv" ? ", knihovna pro XLSX nebyla dostupná" : "") + ").");
+}
+async function esExportAll() {
+  if (!es.loaded) return;
+  const aoa = [ES_EXPORT_HEAD]; const bySubj = new Map(es.subjekty.map(s => [s.klic, s]));
+  for (const subj of es.subjekty) for (const r of esRowsFor(subj)) aoa.push(esExportRow(r, bySubj.get(r.klic)));
+  if (aoa.length === 1) { esStatus("Není co exportovat.", true); return; }
+  const fmt = await esSaveTable(aoa, "platby_spanelsko_" + esFileStamp(), "Platby Španělsko");
+  esStatus("Export reportu: " + (aoa.length - 1) + " řádků (" + fmt.toUpperCase() + (fmt === "csv" ? ", knihovna pro XLSX nebyla dostupná" : "") + ").");
+}
+$("esReload").addEventListener("click", () => esLoad());
+$("esOd").addEventListener("change", () => { if ($("esOd").value) esLoad(); });
+$("esExportAll").addEventListener("click", () => esExportAll());
+$("esPrint").addEventListener("click", () => window.print());
+
 /* ===================== záložky a start ===================== */
 function showTab(tab) {
-  if (!["dod", "odb", "tp"].includes(tab)) tab = "dod";
+  if (!["dod", "odb", "tp", "es"].includes(tab)) tab = "dod";
   state.tab = tab; store.set(TAB_STORE, tab);
   for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
-  for (const t of ["dod", "odb", "tp"]) $("tab-" + t).hidden = (t !== tab);
+  for (const t of ["dod", "odb", "tp", "es"]) $("tab-" + t).hidden = (t !== tab);
+  if (tab === "es" && !es.loaded && !es.busy) esLoad();
 }
 document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); });
 $("refreshBtn").addEventListener("click", () => load());
@@ -563,7 +763,7 @@ startApp();
 <script>
 /* ---- verze aplikace: web (tato stránka) × server na VPS (/api/health) ---- */
 (function () {
-  var WEB_VERZE = "1.2.0", WEB_DATUM = "13. 9. 2026";
+  var WEB_VERZE = "1.3.0", WEB_DATUM = "17. 9. 2026";
   var f = document.querySelector('footer.jhn-copyright');
   if (!f) { f = document.createElement('footer'); f.className = 'jhn-copyright'; f.style.cssText = 'margin-top:2rem;padding:1rem 0;text-align:center;font-size:.75rem;opacity:.55'; document.body.appendChild(f); }
   var el = document.createElement('div');

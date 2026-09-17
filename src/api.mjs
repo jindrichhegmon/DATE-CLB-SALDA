@@ -5,6 +5,7 @@
  *   GET    /api/diag                                      → databáze, server, počty řádků tabulek
  *   GET    /api/prehled?cast=dodavatele|odberatele|vse   → { faktury, odberatele, tp, generovano }
  *   GET    /api/tp                                        → { tp }
+ *   GET    /api/platby-es?od=&do=&pocetPlateb=&pocetPrijmu=&klic=  → { subjekty, polozky, … } (Platby Španělsko z výpisů Helios004)
  *   POST   /api/tp/:firma                                 { popis, frekvence, castka, datum } → { zaznam }
  *   PUT    /api/tp/:firma/:id                             { popis, frekvence, castka, datum } → { zaznam }
  *   DELETE /api/tp/:firma/:id                             → { id, smazano }
@@ -13,6 +14,7 @@
  * stránka Salda odběratelů (repozitář datec-saldoodberatele) z jiné domény.
  */
 import * as salda from './salda.mjs';
+import { platbyEs } from './platby-es.mjs';
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Accept' };
 const json = (body, status = 200) =>
@@ -41,6 +43,7 @@ export function createHandler({ dbs }) {
         return json({ ok: true, ...out });
       }
       if (path === '/api/tp' && method === 'GET') return json({ ok: true, tp: await salda.trvalePrikazy(dbs) });
+      if (path === '/api/platby-es' && method === 'GET') return json({ ok: true, ...(await platbyEs(dbs, Object.fromEntries(url.searchParams))) });
       if (path === '/api/diag' && method === 'GET') return json({ ok: true, ...(await salda.diagnostika(dbs)) });
 
       const m = path.match(/^\/api\/tp\/(centrum|datec)(?:\/(\d+))?$/);

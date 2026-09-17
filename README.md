@@ -19,12 +19,28 @@ Helios004 = Datec), trvalé příkazy z CLB1. Bez Make, Softr i exportů do Exce
 
 Helios se jen čte (login s právem čtení), zapisuje se pouze do tabulky trvalých příkazů v CLB1.
 
+## Platby Španělsko
+
+Záložka **Platby Španělsko** ukáže poslední dvě platby každému španělskému dodavateli (OLIN, SAGESA, ENDESA, AZUL,
+GESTAGUA, Acosol, RMF Andalusian Management, Gran Marbella Consulting, Ayuntamiento de Mijas, Ayuntamiento de Fuengirola)
+a posledních pět příjmů od VIVI HOME. Zdrojem jsou **bankovní výpisy Datec v Heliosu** (Helios004, `dbo.TabBankVypisH` +
+`dbo.TabBankVypisR`, výpisy od roku 2024). Protistrana se hledá v názvu z banky (Helios ho zkracuje na 20 znaků), ve zprávě
+pro příjemce, v popisu i v organizaci ze spárované úhrady (`TabBankVypisRUhrady` → `TabCisOrg`), takže se najdou i platby
+kartou (PRIME VISA → Gestagua, Acosol).
+
+- Období je volitelné (výchozí **od 1. 1. 2025**).
+- **Všechny platby** u dodavatele vypíše všechny pohyby v období, ne jen poslední dvě.
+- **Excel** u sekce nebo **Export do Excelu** pro celý report: sešit .xlsx (knihovna SheetJS se načte z CDN až při
+  prvním exportu; bez ní se uloží CSV, které Excel otevře). Částka CZK chybí u výpisů, které ještě nejsou zaúčtované.
+- Seznam dodavatelů a vzory hledání jsou v poli `SUBJEKTY` v `src/platby-es.mjs` (změna = nasazení serveru).
+
 Kalendář plateb: faktury podle splatnosti, trvalé příkazy rozepsané podle frekvence (týdenní, 14 dní, měsíční,
 čtvrtletní, pololetní, roční, jednorázově) do zvoleného období, počínaje dneškem.
 
 ## API
 ```
 GET    /api/health
+GET    /api/platby-es?od=&do=&pocetPlateb=&pocetPrijmu=&klic=   Platby Španělsko (výpisy Helios004)
 GET    /api/prehled?cast=dodavatele|odberatele|vse
 GET    /api/tp
 POST   /api/tp/:firma            {popis, frekvence, castka, datum}     firma = centrum | datec
