@@ -22,7 +22,8 @@ Helios se jen čte (login s právem čtení), zapisuje se pouze do tabulky trval
 ## Platby Španělsko
 
 Záložka **Platby Španělsko** ukáže poslední dvě platby každému španělskému dodavateli (OLIN, SAGESA, ENDESA,
-GESTAGUA, Acosol, RMF Andalusian Management, Gran Marbella Consulting, Ayuntamiento de Mijas, Ayuntamiento de Fuengirola)
+GESTAGUA, Acosol, RMF Andalusian Management, Gran Marbella Consulting, Vaillant Saunier Duval, Ayuntamiento de Mijas,
+Ayuntamiento de Fuengirola)
 a posledních pět příjmů od VIVI HOME. Zdrojem jsou **bankovní výpisy Datec v Heliosu** (Helios004, `dbo.TabBankVypisH` +
 `dbo.TabBankVypisR`, výpisy od roku 2024). Protistrana se hledá v názvu z banky (Helios ho zkracuje na 20 znaků), ve zprávě
 pro příjemce, v popisu i v organizaci ze spárované úhrady (`TabBankVypisRUhrady` → `TabCisOrg`), takže se najdou i platby
@@ -33,7 +34,7 @@ kartou (PRIME VISA → Gestagua, Acosol).
 - **Excel** u sekce nebo **Export do Excelu** pro celý report: sešit .xlsx (knihovna SheetJS se načte z CDN až při
   prvním exportu; bez ní se uloží CSV, které Excel otevře). Částka CZK chybí u výpisů, které ještě nejsou zaúčtované.
 - Nadpis subjektu je **červený**, když od poslední platby uplynulo víc dní než jeho limit (OLIN, SAGESA, RMF 30 dní;
-  Gestagua, Acosol 60 dní; Gran Marbella 1 rok), nebo když v období žádná platba není.
+  Gestagua, Acosol 60 dní; Gran Marbella a Vaillant 1 rok), nebo když v období žádná platba není.
 - Seznam dodavatelů, vzory hledání i limity (`limitDni`) jsou v poli `SUBJEKTY` v `src/platby-es.mjs` (změna = nasazení serveru).
 
 Kalendář plateb: faktury podle splatnosti, trvalé příkazy rozepsané podle frekvence (týdenní, 14 dní, měsíční,

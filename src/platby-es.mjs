@@ -20,6 +20,7 @@ export const SUBJEKTY = [
   { klic: 'ACOSOL',                  nazev: 'Acosol',                     popis: 'Acosol S.A. — voda a kanalizace',                 typ: 'V', limitDni: 60, vzory: ['%ACOSOL%'] },
   { klic: 'RMF',                     nazev: 'RMF Andalusian Management',  popis: 'správa nemovitosti',                              typ: 'V', limitDni: 30, vzory: ['%RMF%ANDALUSIAN%', '%ANDALUSIAN MANAG%'] },
   { klic: 'GRAN MARBELLA',           nazev: 'Gran Marbella Consulting',   popis: '',                                                typ: 'V', limitDni: 365, vzory: ['%GRAN MARBELLA%', '%MARBELLA CONSUL%'] },
+  { klic: 'VAILLANT',                nazev: 'Vaillant Saunier Duval',     popis: 'servisní smlouva kotle (SAT Oficial) — jednou ročně', typ: 'V', limitDni: 365, vzory: ['%VAILLANT%', '%SAUNIER%'] },
   { klic: 'AYUNTAMIENTO MIJAS',      nazev: 'Ayuntamiento de Mijas',      popis: 'radnice Mijas — daně a poplatky',                 typ: 'V', vzory: ['%AYUNTAMIENTO%MIJA%', '%AYTO%MIJA%', '%AYUDAMIENTO%MIJA%'] },
   { klic: 'AYUNTAMIENTO FUENGIROLA', nazev: 'Ayuntamiento de Fuengirola', popis: 'radnice Fuengirola — daně a poplatky',            typ: 'V', vzory: ['%AYUNTAMIENTO%FUEN%', '%AYTO%FUEN%', '%AYUDAMIENTO%FUEN%'] },
   { klic: 'VIVI HOME',               nazev: 'VIVI HOME',                  popis: 'ViVi Holiday Homes — příjmy z pronájmu',          typ: 'P', vzory: ['%VIVI%'] },
