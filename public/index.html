@@ -2,6 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
+<script src="/portal-vstup.js"></script><!-- přístup jen přes DATEC Portál, musí být první skript -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Salda — Centrum &amp; Datec</title>
 <link rel="icon" href="data:,">
@@ -771,7 +772,8 @@ async function startApp() {
   renderAll();
   await load();
 }
-startApp();
+// Přístup řídí DATEC Portál (portal-vstup.js): bez vstupenky stránku zakryje výzva a data se nenačítají.
+if (window.DATEC_PORTAL && window.DATEC_PORTAL.maVstupenku()) startApp();
 </script>
 <script>
 /* ---- verze aplikace: web (tato stránka) × server na VPS (/api/health) ---- */

@@ -30,7 +30,9 @@ process.env.APP_SPUSTENO = new Date().toISOString();
 
 const { createHandler } = await import('./src/api.mjs');
 const { dbs } = await import('./src/db.mjs');
-const handle = createHandler({ dbs });
+const { overPortal } = await import('./src/portal-vstup.mjs');
+const AUD = (process.env.PORTAL_AUD || 'datec-salda.netlify.app').toLowerCase(); // adresa agendy v DATEC Portálu
+const handle = createHandler({ dbs, pristup: (r) => overPortal(r, AUD) }); // data jen se vstupenkou z DATEC Portálu
 
 const PUBLIC = path.join(ROOT, 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };

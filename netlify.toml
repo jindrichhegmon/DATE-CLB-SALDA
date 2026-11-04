@@ -16,6 +16,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    Content-Security-Policy = "frame-ancestors https://datec-portal.netlify.app https://portal.ddeconsulting.cz" # vložit jen do DATEC Portálu
     Cache-Control = "no-cache"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
